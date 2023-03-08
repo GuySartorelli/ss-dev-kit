@@ -1,2 +1,6 @@
 /vendor/
 /.env
+
+# I think these are added when the main docker image is built, for some reason
+/yarn.lock
+/node_modules/

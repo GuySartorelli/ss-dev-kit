@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Mailhog - will install binaries to /home/www-data/go/bin
+# The dashboard is available on port 8025 of the webserver container
+
+# Make sure cache file exists and is writable, or mailhog won't install
+if [[ ! -d /home/www-data/.cache/ ]]; then
+    mkdir /home/www-data/.cache/
+fi
+chown www-data:www-data /home/www-data/.cache/
+# Install mailhog and mhsendmail
+runuser -l www-data -c 'go install github.com/mailhog/MailHog@latest'
+runuser -l www-data -c 'go install github.com/mailhog/mhsendmail@latest'
+# Start mailhog listener
+runuser -l www-data -c 'nohup sh -c "/home/www-data/go/bin/MailHog" > /dev/null 2>&1 &'
+
+# Store the PID of mailhog so we can see if it's running later
+echo $! > /home/www-data/mailhog.pid
+
+# Apache gets grumpy about PID files pre-existing, so remove them:
+rm -f /var/run/apache2/apache2.pid
+
+# Read default envvars, which includes APACHE_RUN_USER/GROUP=www-data
+source /etc/apache2/envvars
+
+# Start apache
+# It seems like -DFOREGROUND is required for the container to work correctly
+exec /usr/sbin/apache2ctl -DFOREGROUND

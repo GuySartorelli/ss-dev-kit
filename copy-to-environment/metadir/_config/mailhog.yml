@@ -1,0 +1,31 @@
+---
+Name: starter-kit-mailhog
+---
+SilverStripe\Control\Email\Email:
+  admin_email:
+    admin-email@bugfix.test: 'Admin-email'
+
+---
+Name: starter-kit-mailhog-cms4
+Only:
+  classexists: SilverStripe\Control\Email\SwiftMailer
+After:
+  - '#project-emailconfig'
+---
+SilverStripe\Core\Injector\Injector:
+  Swift_Transport:
+    class: Swift_SendmailTransport
+    constructor:
+      0: '/home/www-data/go/bin/mhsendmail -t'
+
+---
+Name: starter-kit-mailhog-cms5
+Only:
+  classexists: Symfony\Component\Mailer\Transport\AbstractTransport
+After: '#mailer'
+---
+SilverStripe\Core\Injector\Injector:
+  Symfony\Component\Mailer\Transport\TransportInterface:
+    constructor:
+      dsn: 'sendmail://default?command=/home/www-data/go/bin/mhsendmail%20-t'
+

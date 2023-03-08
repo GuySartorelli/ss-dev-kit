@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+
+  webserver:
+    container_name: {{projectName}}_webserver
+    image: gsartorelli/webserver
+    build: .
+    restart: always
+    volumes:
+      - ../../:/var/www
+      - ~/.cache/composer:/home/www-data/.cache/composer
+    domainname: {{hostSuffix}}
+    hostname: {{projectName}}
+    environment:
+      APACHE_LOG_DIR: "/var/www/{{metaDirName}}/logs/apache2"
+    {% if webPort %}ports: [{{webPort}}:80]{% endif %}
+
+  database-container:
+    container_name: {{projectName}}_database
+    image: {{database}}:{{dbVersion}}
+    restart: always
+    # use ports instead of IP address for database connection so a database manager can be used on the host
+    ## we'll be using dockerised phpmyadmin or similar, so no need - hopefully.
+    # ports:
+    #   - 3306:3306
+    environment:
+      TZ: "Pacific/Auckland"
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_ROOT_PASSWORD: "root"
+      MYSQL_DATABASE: 'SS_mysite'
+    volumes:
+      - database-volume:/var/lib/mysql
+
+volumes:
+  database-volume:
+    name: {{projectName}}_database-volume

@@ -1,0 +1,77 @@
+#!/bin/bash
+
+# NOTE: Avoid installing any packages here - use Dockerfile for that so that they are cached.
+
+# @TODO validate what's actually needed out of all this
+
+enable_xdebug=false
+
+# Exit immediately if a command exits with a non-zero status.
+set -e
+
+PHP_ERROR_REPORTING=${PHP_ERROR_REPORTING:-"E_ALL"}
+
+versions="7.4 8.0 8.1 8.2"
+types="apache2 cli"
+# https://xdebug.org/docs/upgrade_guide
+xdebug3_options="xdebug.mode ;xdebug.mode xdebug.output_dir xdebug.start_with_request ;xdebug.discover_client_host xdebug.client_host xdebug.client_port"
+for version in $versions; do
+
+    # Configure:
+    # - Error reporting
+    # - Max upload filesize
+    for type in $types; do
+        path="/etc/php/$version/$type/php.ini"
+        if [[ -f "/etc/php/$version/$type/php.ini" ]]; then
+            sed -ri 's/^display_errors\s*=\s*Off/display_errors = On/g' "$path"
+            sed -ri 's/^zend.exception_ignore_args\s*=\s*On/zend.exception_ignore_args = Off/g' "$path"
+            sed -ri 's/^zend.exception_string_param_max_len\s*=\s*0/zend.exception_string_param_max_len = 15/g' "$path"
+            sed -ri "/^error_reporting\s*=.*$/d" "$path"
+            echo "error_reporting = $PHP_ERROR_REPORTING" >> "$path"
+            sed -ri 's/^upload_max_filesize\s*=\s*\d*M/upload_max_filesize = 50M/g' "$path"
+        fi
+    done
+
+    # Disable/enable loading xdebug extension
+    # Note: Disabling xdebug improves performance by a LOT
+    path="/etc/php/$version/mods-available/xdebug.ini"
+    if [ -f "$path" ]; then
+        value=";zend_extension=xdebug.so"
+        if [ "$enable_xdebug" == true ]; then
+            value="zend_extension=xdebug.so"
+        fi
+        echo "$value" > "$path"
+    fi
+    # Set xdebug options in php.ini files
+    for type in $types; do
+        path="/etc/php/$version/$type/php.ini"
+        if [ -f "$path" ]; then
+		    if ! grep -r "[XDebug]" "$path" > /dev/null; then
+				echo "[XDebug]" >> "$path"
+			fi
+			for option in $xdebug3_options; do
+				value="yes"
+				if [[ "$option" == "xdebug.client_host" ]]; then
+					value="172.17.0.1" # this is the actual host IP from the container's perspective
+				fi
+				if [[ "$option" == "xdebug.mode" ]]; then
+					value="debug"
+				fi
+				if [[ "$option" == ";xdebug.mode" ]]; then
+					value="debug,profile"
+				fi
+				if [[ "$option" == "xdebug.output_dir" ]]; then
+					value="/var/www/.ss-dev-starter-kit/artifacts/xdebug"
+				fi
+				if [[ "$option" == "xdebug.client_port" ]]; then
+					value="9003" # this is the port on the HOST that should listen for xdebug
+				fi
+				if grep -r "$option" "$path" > /dev/null; then
+					sed -i "s/$option =.*/$option = $value/g" "$path"
+				else
+					echo "$option = $value" >> "$path"
+				fi
+			done
+        fi
+    done
+done

@@ -1,26 +1,16 @@
 #!/usr/bin/env php
 <?php declare(strict_types=1);
 
-// @TODO protection here for if that's not a file - output some error and exit(1)
-require_once __DIR__ . '/../vendor/autoload.php';
-
-use Silverstripe\DevStarterKit\Command;
-use Silverstripe\DevStarterKit\Utility\Config;
-use Symfony\Component\Console\Application;
-
-set_time_limit(0);
-// @TODO we probably want to implement an error handler
-// If we emit all errors as ErrorException, we can then add one big try/catch
-// and then we can make sure all uncaught exceptions render in a way we want.
-error_reporting(E_ALL);
-ini_set('display_errors', '1');
-// @TODO we may want a debug mode which, when enabled, doesn't set these.
-if (extension_loaded('xdebug')) {
-    ini_set('xdebug.show_exception_trace', '0');
-    ini_set('xdebug.scream', '0');
+$autoloadFile = __DIR__ . '/../vendor/autoload.php';
+if (!file_exists($autoloadFile)) {
+    throw new RuntimeException('You need to run composer install until we make a phar for this');
 }
+require_once $autoloadFile;
 
-Config::init();
+use Silverstripe\DevStarterKit\Application;
+use Silverstripe\DevStarterKit\Command;
+
+Application::bootstrap();
 
 // @TODO consider handling version number similarly to how composer does.
 // You can use the major and probably even minor version as a constant,
@@ -34,10 +24,8 @@ $application = new Application('Silverstripe Developer Starter Kit');
 // Add custom commands
 $application->addCommands([
     // new Command\??\Proxy(), // see https://symfony.com/doc/current/setup/symfony_server.html#setting-up-the-local-proxy
-    // new Command\Env\Create(),
+    new Command\Env\Create(),
     // new Command\Env\Destroy(),
-    // new Command\Env\Attach(),
-    // new Command\Env\Detach(),
     // new Command\Env\Info(), // maybe this is the default for the config command (i.e. no options), instead of its own command?
     // new Command\Env\Config(), // change php version, toggle xdebug, etc
     // new Command\Docker\Up(), // docker compose up -d

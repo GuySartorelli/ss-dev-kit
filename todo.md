@@ -1,50 +1,100 @@
 # Things to do
 
+## IMMEDIATE NEXT STEPS
+
+- sort out output
+- error handling?
+- clone and attach modes for create command
+- peripheral commands (docker, info, php)
+
 ## Get a decent create command started
 
+- Decide once and for all about whether to keep set up for the optional modules
+  - dynamo-db
+  - postgres/sqlite3
+  - recipe-testing
+- If we don't already, validate that we're not trying to create inside an existing environment. Nested environments are not supported.
 - Figure out a better system for dealing with hosts (find out how symfony deals with this - if they have a similar tool)
   - i.e. we don't want to be asking for peoples' passwords.
-  - Looks at other similar projects
+  - Look at other similar projects
     - There was one showcased at stripecon I think?
-      - Turns out that was literally just https://github.com/silverstripe/silverstripe-serve
+      - Turns out that was literally just <https://github.com/silverstripe/silverstripe-serve>
       - [Laravel valet](https://laravel.com/docs/10.x/valet) was also mentioned. Looks like that's nginx so that's a non-starter
+      - Laravel also has [sail](https://laravel.com/docs/10.x/sail) which is also nginx but does have a lot of similarities with this so worth checking out [on github](https://github.com/laravel/sail/)
     - Drupal probably has something similar
       - Drupal just uses the PHP built-in server bound to a local port
     - Symfony probably has something similar
       - Symfony cli binds ports by default.
-      - Has a proxy for using hostname: https://symfony.com/doc/current/setup/symfony_server.html#setting-up-the-local-proxy
+      - Has a proxy for using hostname: <https://symfony.com/doc/current/setup/symfony_server.html#setting-up-the-local-proxy>
+        - Use a lockable command for this: <https://kurozumi.github.io/symfony-docs/console/lockable_trait.html>
       - Should be really easy to do something similar.
 - Auto-generated SSL cert (and make sure we have an SSL and a non-SSL port? Does symfony do that?)
-- Make a main docker image, which has most if not all of the stuff the current one has
-- Consider taking a more common php base for it?
-- Have a per-project image that uses the main one in "FROM: " directive
-  - In the future this will be stored in dockerhub
-  - We'll have a `--local-docker-image` or similar option to build it locally instead.
 - Set the docker starting php version in the per-project docker image. That way `docker compose down && docker compose up -d` will give a container with the correct PHP version.
-- Sort out clean output that respects symfony/console's verbosity
-- Use https://github.com/icanhazstring/symfony-console-spinner (or similar) as a better "something is happening" output
-  - Consider finding out how to do things async, then we can just have this running (and have multiple of this running!) separately from the output coming through for it, and we can have something like "nothing has happened for x seconds, something might have gone wrong" after like 30 seconds or so of no output prompting a change.
-  - We could also update the time counter without updating the spinner, so the time counter is _always_ going up, but it only spins when there's output.
-- Get rid of all the PR stuff
-  - Keep the fork stuff. You can then have a `--forked-dependency` or similar option and make it add the forks to the composer.json like it would for `--pr` with `--pr-has-deps`
-- Don't have the suffix as part of the environment dir name
-  - Also rename that to something like `environmentId`
-  - Or better yet, find a way to do away with it altogether
-    - Main reasons it's there is for predictable IP address (see better way to do hosts above) and predictable port for db
-    - hosts solution hopefully takes care of IP address need.
-    - it would be nice to have a single central phpmyadmin or similar which handles all of the containers without needing the port on the host.
-- Have logs/, docker/, etc dirs in `.ss-dev-starter-kit/` dir in project root
-  - Add that dir to the .gitignore if it's not there already
-  - See if you can use a name in `.ss-dev-starter-kit/docker/.env` so you don't have to suffix the docker dir name
-- Add db option for sqlite3
-- Add warning when postgres or sqlite3 is chosen
-  - blah blah not commercially supported blah blah database commands may not work as expected
+  - Maybe respect [`.platform.yml`](https://servicedesk.silverstripe.cloud/support/solutions/articles/75000012884-server-configuration-using-platform-yml), falling back to composer platform config when picking php version - alert user about mismatch and confirm version to use if both are present but not the same.
+- Consider adding a `--forked-dependency` or similar option (which reuses PR stuff from the old command) and make it add the forks to the composer.json like it would for `--pr` with `--pr-has-deps`
+- Consider having a unique environment ID - used to be assured by the env suffix
 - When there's an error that results in not being able to do the thing, output the error message in a clean error format before rolling back
-  - For that matter, put most things (if not everything) in a clean try/finally - on finally, if we weren't successful ask "Something went wrong. Do you want to keep the project folder for debugging?" (or just rollback without asking)
+  - For that matter, put most things (if not everything) in a clean try/finally - on finally, if we weren't successful ask "Something went wrong. Do you want to keep the project folder for debugging?" (or just rollback without asking) (or see note about events below)
 - Don't do the first composer install if we have forks or additional modules
   - instead, `create-project` must have `--no-install`, as should each `require` statement.
   - Do a final `composer install` after everything is finally settled (unless `--no-install` is in compsoer args option)
+
+## Other commands
+
+- Info command should show db type and version
+- Should Info command show the FULL php version (e.g. '8.1.17')?
+- Info command should check if mailhog is running (check the pid in `/home/www-data/mailhog.pid`)
+- Is there a way to get mailhog to run under some path (e.g. `http://localhost:8080/__mailhog`) for when we're using a port?
+  - Yes, probably, via apache
+
+## Output
+
+- Make sure each step method STARTS with the `$this->io->writeln()`.
+  - Convert that into a method which starts a step spinner (see spinner below)
+  - All output after that gets caught and increments the spinner
+  - do whatever's appropriate for higher verbosities (e.g. `-v` shows substeps as subspinners, but `-vv` has no spinners and just outputs the stuff)
+  - Essentially, wrap the OutputInterface passed to run() in a custom output, and have stepped outputs (main step output, substep output, etc etc which ultimately ends up mapping to the various verbosity levels)
+- Sort out clean output that respects symfony/console's verbosity
+  - Only main step lines and error/success messages are in normal verbosity?
+  - Additional output with `-v` (should probably be another colour)
+    - Not sure if stuff hidden behind a process bar gets shown with `-v` or `-vv`
+  - Not sure what gets `-vv` treatment
+  - EVERYTHING including error stack traces, full output from subprocesses, etc is output with `-vvv`
+- Use <https://github.com/icanhazstring/symfony-console-spinner> (or similar) as a better "something is happening" output
+  - Consider finding out how to do things async, then we can just have this running (and have multiple of this running!) separately from the output coming through for it, and we can have something like "nothing has happened for x seconds, something might have gone wrong" after like 30 seconds or so of no output prompting a change.
+  - We could also update the time counter without updating the spinner, so the time counter is _always_ going up, but it only spins when there's output.
+- Have clean global error handling
+
+## General things
+
+- Autocomplete
+  - Official way (requires user to do some stuff)
+  - Unofficial way (also requires user to do some stuff - so why does this option exist?): <https://github.com/stecman/symfony-console-completion>
+- Use [events](https://kurozumi.github.io/symfony-docs/components/console/events.html) as appropriate - e.g. terminate event could make sure an environment being created via create command gets torn down if command terminated early.
 - Add a clean command shortcut system
   - e.g. `starterkit composer` is a shortcut for `starterkit docker:exec composer`
   - has a divider in `starterkit list` called "command shortcuts" similar to the "env" or "docker" dividers
   - `starterkit help composer` works in an expected way (i.e. shows description for the shortcut with the appropriate args/options)
+  - Note that composer specifically might actually end up being its own command instead, and just pass all arguments/etc directly to composer. If so, have to make sure it can do autocomplete neatly too (when composer is installed natively - but also maybe pass through to the docker container and ask IT for autocomplete?).
+
+## Eventually
+
+- Unit tests
+  - How do you even test something like this?
+    - See how laravel and symfony test theirs
+    - See how composer does its testing
+- Documentation
+
+### Plugins
+
+- Have a dir in `~/` (and its other OS equivalents) e.g. `/home/gsartorelli/.ss-dev-kit/plugins/` with a composer.json
+- Plugins must have a special type e.g. "silverstripe-devkit-plugin"
+- Have a plugin command to handle plugins
+  - Do a `composer require` in that directory to install plugins
+    - Yes this requires installing composer on the host machine. I think that's fine.
+  - Probably use the autoloader from that dir after the main autoloader
+    - Might need to do something funky to avoid duplicates? Not sure how that works.
+  - If we don't have clean config and extensible APIs by then, just rip them from framework
+    - Worst case people say "Put that back and write your own thing"
+    - More likely people will just accept it and not incorporate into framework and we have duplicate code
+    - Best case people go "oh yeah that DOES make sense" and finally accept those RFCs

@@ -1,0 +1,120 @@
+FROM ubuntu:22.04
+# @TODO consider using alpine
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+VOLUME ["/var/www"]
+
+RUN apt-get update
+RUN apt-get install -y software-properties-common
+
+RUN apt-get install -y apache2 \
+  # Needed for a couple of the installs
+  wget \
+  # bcmath extension and chromium gave warnings when installing if this was missing
+  apt-utils \
+  # Required for mailhog
+  # @TODO: Check if git still needed
+  golang-go git
+
+# Make all php versions available
+RUN add-apt-repository -y ppa:ondrej/php
+RUN add-apt-repository -y ppa:ondrej/apache2
+
+# PHP version specific packages
+# A note about xdebug - much faster without it, noticable when running all phpunit tests within a module,
+# Disabled by default in docker_bash_script
+RUN apt-get install -y libapache2-mod-php7.4 \
+    php7.4 \
+    php7.4-bcmath \
+    php7.4-cli \
+    php7.4-curl \
+    php7.4-dev \
+    php7.4-dom \
+    php7.4-gd \
+    php7.4-intl \
+    php7.4-json \
+    php7.4-ldap \
+    php7.4-mbstring \
+    php7.4-mysql \
+    php7.4-tidy \
+    php7.4-xdebug \
+    php7.4-zip
+
+RUN apt-get install -y libapache2-mod-php8.0 \
+    php8.0 \
+    php8.0-bcmath \
+    php8.0-cli \
+    php8.0-curl \
+    php8.0-dev \
+    php8.0-dom \
+    php8.0-gd \
+    php8.0-intl \
+    php8.0-ldap \
+    php8.0-mbstring \
+    php8.0-mysql \
+    php8.0-tidy \
+    php8.0-xdebug \
+    php8.0-zip
+
+RUN apt-get install -y libapache2-mod-php8.1 \
+    php8.1 \
+    php8.1-bcmath \
+    php8.1-cli \
+    php8.1-curl \
+    php8.1-dev \
+    php8.1-dom \
+    php8.1-gd \
+    php8.1-intl \
+    php8.1-ldap \
+    php8.1-mbstring \
+    php8.1-mysql \
+    php8.1-tidy \
+    php8.1-xdebug \
+    php8.1-zip
+
+RUN apt-get install -y libapache2-mod-php8.2 \
+    php8.2 \
+    php8.2-bcmath \
+    php8.2-cli \
+    php8.2-curl \
+    php8.2-dev \
+    php8.2-dom \
+    php8.2-gd \
+    php8.2-intl \
+    php8.2-ldap \
+    php8.2-mbstring \
+    php8.2-mysql \
+    php8.2-tidy \
+    php8.2-xdebug \
+    php8.2-zip
+
+# Do this after all of the PHP stuff so we can keep those slices when composer updates
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Required for apt install -f google-chrome-stable_current_amd64.deb in 20.04
+# for some missing deps such as libnss3_3.49.1-1ubuntu1.7_amd64.deb
+# @TODO: Check if still needed with ubuntu 22.04
+RUN add-apt-repository -y ppa:savoury1/ffmpeg4
+# Install chrome + chromedriver manually rather than with apt to ensure we get the latest version
+# also on 20.04+ apt install chromium will use snap which does not work in docker
+RUN apt-get install -y wget unzip && \
+    wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
+    apt install -f -y ./google-chrome-stable_current_amd64.deb && \
+    BROWSER_MAJOR=$(google-chrome --version | sed 's/Google Chrome \([0-9]*\).*/\1/g') && \
+    wget https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${BROWSER_MAJOR} -O chrome_version && \
+    wget https://chromedriver.storage.googleapis.com/`cat chrome_version`/chromedriver_linux64.zip && \
+    unzip chromedriver_linux64.zip && \
+    mv chromedriver /usr/local/bin/ && \
+    DRIVER_MAJOR=$(chromedriver --version | sed 's/ChromeDriver \([0-9]*\).*/\1/g') && \
+    echo "chrome version: $BROWSER_MAJOR" && \
+    echo "chromedriver version: $DRIVER_MAJOR" && \
+    if [ $BROWSER_MAJOR != $DRIVER_MAJOR ]; then echo "CHROME/CHROMEDRIVER VERSION MISMATCH"; exit 1; fi && \
+    # Increment echo 1 to get a more recent version of chrome by refreshing this slice
+    echo 1 > /dev/null
+
+# Bash script - anything else that's just easier to write in raw bash than dockerfile
+COPY docker_bash_script /usr/local/bin/docker_bash_script
+RUN chmod +x /usr/local/bin/docker_bash_script
+RUN /usr/local/bin/docker_bash_script
+RUN rm /usr/local/bin/docker_bash_script

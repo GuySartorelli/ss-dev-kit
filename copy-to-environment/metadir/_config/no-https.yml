@@ -1,0 +1,10 @@
+---
+Name: starter-kit-no-https
+After: '#appsecurity'
+---
+# Make sure we never force https, since SSL isn't supported yet.
+# Remove this once SSL is supported.
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\Control\Middleware\CanonicalURLMiddleware:
+    properties:
+      ForceSSL: false

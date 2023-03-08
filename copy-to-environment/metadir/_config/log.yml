@@ -1,0 +1,12 @@
+---
+Name: starter-kit-error-logging
+---
+SilverStripe\Core\Injector\Injector:
+  Psr\Log\LoggerInterface.errorhandler:
+    calls:
+      LogFileHandler: [ pushHandler, [ '%$LogFileHandler' ] ]
+  LogFileHandler:
+    class: Monolog\Handler\StreamHandler
+    constructor:
+      - "/var/www/.ss-dev-starter-kit/logs/silverstripe.log"
+      - "debug"
