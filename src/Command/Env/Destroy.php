@@ -13,6 +13,7 @@ use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Path;
 use RuntimeException;
+use Silverstripe\DevStarterKit\IO\StepLevel;
 
 /**
  * Code which destroys a dockerised local development environment
@@ -35,7 +36,10 @@ class Destroy extends BaseCommand
         parent::initialize($input, $output);
         // Confirm teardown if the user didn't specify the environment to avoid human error tearing down the wrong env.
         if ($input->getArgument('env-path') === './') {
-            $continue = $this->io->ask('You passed no arguments and are tearing down <options=bold>' . $this->env->getName() . '</> - do you wish to continue?');
+            $continue = $this->output->ask(
+                'You passed no arguments and are tearing down <options=bold>' . $this->env->getName() . '</> - do you wish to continue?',
+                default: 'y'
+            );
             if (!is_string($continue) || !preg_match('/^y(es)?$/i', $continue)) {
                 throw new RuntimeException('Opting not to tear down this environment.');
             }
@@ -53,41 +57,45 @@ class Destroy extends BaseCommand
      */
     protected function doExecute(): int
     {
+        $this->output->startStep(StepLevel::Command, "Destroying environment at <info>{$this->env->getProjectRoot()}</info>");
+
         // Make sure we're not _in_ the environment dir when we destroy it.
         if (Path::isBasePath($this->env->getProjectRoot(), getcwd())) {
             chdir(Path::join($this->env->getProjectRoot(), '../'));
         }
 
         // Pull down docker
-        $failureCode = $this->pullDownDocker();
-        if ($failureCode) {
-            return $failureCode;
+        $success = $this->pullDownDocker();
+        if (!$success) {
+            $this->output->endStep(StepLevel::Command, success: false);
+            return Command::FAILURE;
         }
 
         // Delete environment directory
         try {
-            $this->io->writeln(self::STYLE_STEP . 'Removing environment directory' . self::STYLE_CLOSE);
+            $this->output->writeln('Removing environment directory');
             $this->filesystem->remove($this->env->getProjectRoot());
         } catch (IOException $e) {
-            $this->io->error('Couldn\'t delete environment directory: ' . $e->getMessage());
+            $this->output->endStep(StepLevel::Command, "Couldn't delete environment directory: {$e->getMessage()}", false);
             return Command::FAILURE;
         }
 
-        $this->io->success("Env {$this->env->getName()} successfully destroyed.");
+        $this->output->endStep(StepLevel::Command, 'Environment successfully destroyed.');
         return Command::SUCCESS;
     }
 
-    protected function pullDownDocker(): int|bool
+    protected function pullDownDocker(): bool
     {
-        $this->io->writeln(self::STYLE_STEP . 'Taking down docker' . self::STYLE_CLOSE);
+        $this->output->startStep(StepLevel::Primary, 'Taking down docker');
 
         $success = $this->getDockerService()->down(true, true);
         if (!$success) {
-            $this->io->error('Problem occured while stopping docker containers.');
-            return Command::FAILURE;
+            $this->output->endStep(StepLevel::Primary, 'Problem occured while stopping docker containers.', false);
+            return false;
         }
 
-        return false;
+        $this->output->endStep(StepLevel::Primary, 'Took down docker successfully');
+        return true;
     }
 
     /**

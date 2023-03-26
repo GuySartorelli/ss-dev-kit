@@ -3,6 +3,7 @@
 namespace Silverstripe\DevStarterKit\Utility;
 
 use RuntimeException;
+use Silverstripe\DevStarterKit\IO\CommandOutput;
 use Silverstripe\DevStarterKit\Trait\UsesDocker;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -13,9 +14,9 @@ class PHPService
 
     private Environment $env;
 
-    private OutputInterface $output;
+    private CommandOutput $output;
 
-    public function __construct(Environment $environment, OutputInterface $output)
+    public function __construct(Environment $environment, CommandOutput $output)
     {
         $this->env = $environment;
         $this->output = $output;
@@ -29,10 +30,11 @@ class PHPService
      */
     public function getCliPhpVersion(bool $fullVersion = false): string
     {
+        $this->output->writeln('Checking CLI PHP version', OutputInterface::VERBOSITY_DEBUG);
         $echo = $fullVersion ? 'PHP_VERSION' : "PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION";
-        $dockerResult = $this->runDockerCommand(
+        $dockerResult = $this->getDockerService()->exec(
             'echo $(php -r "echo ' . $echo . ';")',
-            returnOutput: true
+            outputType: DockerService::OUTPUT_TYPE_RETURN
         );
         if (!is_string($dockerResult)) {
             throw new RuntimeException("Error fetching PHP version");
@@ -54,13 +56,14 @@ class PHPService
      */
     public function getApachePhpVersion(): string
     {
-        $dockerResult = $this->runDockerCommand(
+        $this->output->writeln('Checking apache PHP version', OutputInterface::VERBOSITY_DEBUG);
+        $dockerResult = $this->getDockerService()->exec(
             'ls /etc/apache2/mods-enabled/ | grep php[0-9.]*\.conf',
-            returnOutput: true
+            outputType: DockerService::OUTPUT_TYPE_RETURN
         );
         $version = trim($dockerResult ?: '');
         $regex = '/^php([0-9.]+)\.conf$/';
-        if ($dockerResult === Command::FAILURE || !preg_match($regex, $version)) {
+        if ($dockerResult === false || !preg_match($regex, $version)) {
             throw new RuntimeException("Error fetching PHP version: $version");
         }
         $version = preg_replace($regex, '$1', $version);
@@ -75,12 +78,13 @@ class PHPService
      */
     public function debugIsEnabled(?string $version = null): bool
     {
+        $this->output->writeln('Checking if xdebug is enabled', OutputInterface::VERBOSITY_DEBUG);
         // Assume by this point the PHP versions are the same.
         $version ??= $this->getCliPhpVersion();
         $path = $this->getDebugPath($version);
-        $dockerResult = $this->runDockerCommand("cat {$path}", returnOutput: true);
+        $dockerResult = $this->getDockerService()->exec("cat {$path}", outputType: DockerService::OUTPUT_TYPE_RETURN);
         $debug = trim($dockerResult ?: '');
-        if ($dockerResult === Command::FAILURE) {
+        if ($dockerResult === false) {
             throw new RuntimeException("Error fetching debug status: $debug");
         }
         return $debug !== '' && !str_starts_with($debug, ';');
@@ -99,7 +103,7 @@ class PHPService
      *
      * @TODO set some flag or config for docker compose or the docker image entrypoint so that the correct PHP version is used on startup
      */
-    public function swapToVersion(string $version): int
+    public function swapToVersion(string $version): bool
     {
         if (!static::versionIsAvailable($version)) {
             throw new RuntimeException("PHP $version is not available.");
@@ -109,23 +113,23 @@ class PHPService
         $oldVersionApache = $this->getApachePhpVersion();
 
         if ($oldVersionCLI === $oldVersionApache && $oldVersionApache === $version) {
-            $this->output->writeln("<info>Already using version $version - skipping.</info>");
-            return Command::SUCCESS;
+            $this->output->writeln("Already using version <info>$version</info> - skipping.");
+            return true;
         }
 
         $success = true;
 
         if ($oldVersionCLI !== $version) {
-            $this->output->writeln("<info>Swapping CLI PHP from $oldVersionCLI to $version.</info>");
+            $this->output->writeln("Swapping CLI PHP from <info>$oldVersionCLI</info> to <info>$version</info>.");
             $success = $success && $this->swapCliToVersion($version);
         }
 
         if ($oldVersionApache !== $version) {
-            $this->output->writeln("<info>Swapping Apache PHP from $oldVersionApache to $version.</info>");
-            $success = $success &&$this->swapApacheToVersion($oldVersionApache, $version);
+            $this->output->writeln("Swapping Apache PHP from <info>$oldVersionApache</info> to <info>$version</info>.");
+            $success = $success && $this->swapApacheToVersion($oldVersionApache, $version);
         }
 
-        return $success ? Command::SUCCESS : Command::FAILURE;
+        return $success;
     }
 
     private function swapCliToVersion(string $toVersion): bool
@@ -135,7 +139,7 @@ class PHPService
         ln -s /usr/bin/php{$toVersion} /etc/alternatives/php
         EOL;
 
-        return $this->runDockerCommand($command, asRoot: true) === Command::SUCCESS;
+        return $this->getDockerService()->exec($command, asRoot: true);
     }
 
     private function swapApacheToVersion(string $fromVersion, string $toVersion): bool
@@ -147,7 +151,13 @@ class PHPService
         ln -s /etc/apache2/mods-available/php$toVersion.load /etc/apache2/mods-enabled/php$toVersion.load
         EOL;
 
-        return $this->runDockerCommand($command, asRoot: true, requiresRestart: true) === Command::SUCCESS;
+        $success = $this->getDockerService()->exec($command, asRoot: true);
+
+        if (!$success) {
+            return false;
+        }
+
+        return $this->getDockerService()->restart(DockerService::CONTAINER_WEBSERVER, timeout: 0);
     }
 
     /**

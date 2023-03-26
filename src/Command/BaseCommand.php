@@ -3,25 +3,19 @@
 namespace Silverstripe\DevStarterKit\Command;
 
 use Exception;
+use Silverstripe\DevStarterKit\IO\CommandOutput;
 use Silverstripe\DevStarterKit\Trait\HasEnvironment;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
 abstract class BaseCommand extends Command
 {
     protected bool $isSubCommand = false;
 
-    public const STYLE_STEP = '<fg=blue>';
-
-    public const STYLE_CLOSE = '</>';
-
     protected InputInterface $input;
 
-    protected OutputInterface $output;
-
-    protected SymfonyStyle $io;
+    protected CommandOutput $output;
 
     /**
      * Executes the current command.
@@ -45,8 +39,7 @@ abstract class BaseCommand extends Command
     protected function initialize(InputInterface $input, OutputInterface $output)
     {
         $this->input = $input;
-        $this->output = $output;
-        $this->io = new SymfonyStyle($input, $output);
+        $this->output = new CommandOutput($input, $output);
 
         if (in_array(HasEnvironment::class, class_uses($this))) {
             /** @var BaseCommand&HasEnvironment $this */

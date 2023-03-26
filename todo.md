@@ -2,17 +2,16 @@
 
 ## IMMEDIATE NEXT STEPS
 
-- sort out output
-- error handling?
 - clone and attach modes for create command
+- unit tests for output
+- error and exception handling?
+- deal with TODO comments in code
+- add phpcs config and fix linting issues
 - peripheral commands (docker, info, php)
 
 ## Get a decent create command started
 
-- Decide once and for all about whether to keep set up for the optional modules
-  - dynamo-db
-  - postgres/sqlite3
-  - recipe-testing
+- Move port into the .env file. Makes it easier to change and _potentially_ easier to fetch
 - If we don't already, validate that we're not trying to create inside an existing environment. Nested environments are not supported.
 - Figure out a better system for dealing with hosts (find out how symfony deals with this - if they have a similar tool)
   - i.e. we don't want to be asking for peoples' passwords.
@@ -49,21 +48,10 @@
 
 ## Output
 
-- Make sure each step method STARTS with the `$this->io->writeln()`.
-  - Convert that into a method which starts a step spinner (see spinner below)
-  - All output after that gets caught and increments the spinner
-  - do whatever's appropriate for higher verbosities (e.g. `-v` shows substeps as subspinners, but `-vv` has no spinners and just outputs the stuff)
-  - Essentially, wrap the OutputInterface passed to run() in a custom output, and have stepped outputs (main step output, substep output, etc etc which ultimately ends up mapping to the various verbosity levels)
-- Sort out clean output that respects symfony/console's verbosity
-  - Only main step lines and error/success messages are in normal verbosity?
-  - Additional output with `-v` (should probably be another colour)
-    - Not sure if stuff hidden behind a process bar gets shown with `-v` or `-vv`
-  - Not sure what gets `-vv` treatment
-  - EVERYTHING including error stack traces, full output from subprocesses, etc is output with `-vvv`
-- Use <https://github.com/icanhazstring/symfony-console-spinner> (or similar) as a better "something is happening" output
-  - Consider finding out how to do things async, then we can just have this running (and have multiple of this running!) separately from the output coming through for it, and we can have something like "nothing has happened for x seconds, something might have gone wrong" after like 30 seconds or so of no output prompting a change.
-  - We could also update the time counter without updating the spinner, so the time counter is _always_ going up, but it only spins when there's output.
+- Make sure docker and other service output is appropriately only output during the relevant verbosity level
+  - When not output, it must advance the progress bar
 - Have clean global error handling
+  - According to symfony docs "The full exception stacktrace is printed if the VERBOSITY_VERBOSE level or above is used." - find out how to change that so it only happens in debug mode. Verbose is for users of the system, the stack trace is for debugging the system.
 
 ## General things
 
@@ -87,7 +75,7 @@
 
 ### Plugins
 
-- Have a dir in `~/` (and its other OS equivalents) e.g. `/home/gsartorelli/.ss-dev-kit/plugins/` with a composer.json
+- Have a dir in the home directory (cross-platform somehow) e.g. `/home/gsartorelli/.ss-dev-kit/plugins/` with a composer.json
 - Plugins must have a special type e.g. "silverstripe-devkit-plugin"
 - Have a plugin command to handle plugins
   - Do a `composer require` in that directory to install plugins

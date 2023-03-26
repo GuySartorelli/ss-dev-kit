@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b05be34c39e453a6735cce750f93c935",
+    "content-hash": "b6326d85658a4d2fef5afe0131425bfb",
     "packages": [
         {
             "name": "composer/semver",
@@ -161,6 +161,46 @@
                 }
             ],
             "time": "2022-10-04T14:20:15+00:00"
+        },
+        {
+            "name": "icanhazstring/symfony-console-spinner",
+            "version": "1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/icanhazstring/symfony-console-spinner.git",
+                "reference": "849c91a8ac19079d6f24c6b4f46540e96df45ead"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/icanhazstring/symfony-console-spinner/zipball/849c91a8ac19079d6f24c6b4f46540e96df45ead",
+                "reference": "849c91a8ac19079d6f24c6b4f46540e96df45ead",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.3 || ^8.0",
+                "symfony/console": "^4.3 || ^5.0 || ^6.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "icanhazstring\\SymfonyConsoleSpinner\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Custom symfony progressbar spinner",
+            "keywords": [
+                "console",
+                "spinner",
+                "symfony"
+            ],
+            "support": {
+                "issues": "https://github.com/icanhazstring/symfony-console-spinner/issues",
+                "source": "https://github.com/icanhazstring/symfony-console-spinner/tree/1.1.0"
+            },
+            "time": "2023-03-23T16:36:58+00:00"
         },
         {
             "name": "psr/container",

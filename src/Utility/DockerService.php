@@ -3,21 +3,41 @@
 namespace Silverstripe\DevStarterKit\Utility;
 
 use InvalidArgumentException;
+use Silverstripe\DevStarterKit\IO\CommandOutput;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Process\Process;
 
 final class DockerService
 {
     private Environment $env;
 
-    private OutputInterface $output;
+    private CommandOutput $output;
+
+    /**
+     * The output is returned from the method call
+     */
+    public const OUTPUT_TYPE_RETURN = 0;
+
+    /**
+     * The output is only ever output to the terminal in debug mode
+     */
+    public const OUTPUT_TYPE_DEBUG = 1;
+
+    /**
+     * The output is output to the terminal following the normal step level rules
+     */
+    public const OUTPUT_TYPE_NORMAL = 2;
+
+    /**
+     * The output is always output to the terminal regardless of step level and verbosity (except quiet mode)
+     */
+    public const OUTPUT_TYPE_ALWAYS = 3;
 
     public const CONTAINER_WEBSERVER = '_webserver';
 
     public const CONTAINER_DATABASE = '_database';
 
-    public function __construct(Environment $environment, OutputInterface $output)
+    public function __construct(Environment $environment, CommandOutput $output)
     {
         $this->env = $environment;
         $this->output = $output;
@@ -45,13 +65,8 @@ final class DockerService
 
         if (!$process->isSuccessful()) {
             // @TODO more consistent error messaging
-            $msg = "Couldn't get status of docker containers.";
             // @TODO use $process->getErrorOutput(); here to indicate what went wrong
-            if ($this->output instanceof SymfonyStyle) {
-                $this->output->warning($msg);
-            } else {
-                $this->output->writeln($msg);
-            }
+            $this->output->warning("Couldn't get status of docker containers.");
             return null;
         }
 
@@ -69,7 +84,7 @@ final class DockerService
     /**
      * Create and start docker containers
      */
-    public function up(bool $fullBuild = false): bool
+    public function up(bool $fullBuild = false, int $outputType = self::OUTPUT_TYPE_NORMAL): bool|string
     {
         $options = [];
         if ($fullBuild) {
@@ -77,7 +92,7 @@ final class DockerService
         }
         $options[] = '-d';
 
-        return $this->dockerComposeCommand('up', $options);
+        return $this->dockerComposeCommand('up', $options, $outputType);
     }
 
     /**
@@ -85,8 +100,9 @@ final class DockerService
      *
      * @param bool $images Remove images used by services if they don't have custom tags
      * @param bool $volumes Remove named volumes declared in the volumes section of the Compose file and anonymous volumes attached to containers
+     * @param int $outputType One of the OUTPUT_TYPE constants.
      */
-    public function down(bool $images = false, bool $volumes = false): bool
+    public function down(bool $images = false, bool $volumes = false, int $outputType = self::OUTPUT_TYPE_NORMAL): bool|string
     {
         $options = ['--remove-orphans'];
         if ($volumes) {
@@ -96,23 +112,23 @@ final class DockerService
             $options[] = '--rmi=local';
         }
 
-        return $this->dockerComposeCommand('down', $options);
+        return $this->dockerComposeCommand('down', $options, $outputType);
     }
 
     /**
      * Start services for containers that already exist
      */
-    public function start(): bool
+    public function start(int $outputType = self::OUTPUT_TYPE_NORMAL): bool|string
     {
-        return $this->dockerComposeCommand('start');
+        return $this->dockerComposeCommand('start', outputType: $outputType);
     }
 
     /**
      * Stop services without stopping or removing containers
      */
-    public function stop(): bool
+    public function stop(int $outputType = self::OUTPUT_TYPE_NORMAL): bool|string
     {
-        return $this->dockerComposeCommand('stop');
+        return $this->dockerComposeCommand('stop', outputType: $outputType);
     }
 
     /**
@@ -120,7 +136,7 @@ final class DockerService
      *
      * If no container is passed in, it restarts everything.
      */
-    public function restart(string $container = '', ?int $timeout = null): bool
+    public function restart(string $container = '', ?int $timeout = null, int $outputType = self::OUTPUT_TYPE_NORMAL): bool|string
     {
         $options = [];
         if ($timeout !== null) {
@@ -130,20 +146,23 @@ final class DockerService
             $options[] = ltrim($container, '_');
         }
 
-        return $this->dockerComposeCommand('restart', $options);
+        return $this->dockerComposeCommand('restart', $options, $outputType);
     }
 
     /**
      * Run any docker compose command.
      */
-    public function dockerComposeCommand(string $command, array $options = []): bool
+    public function dockerComposeCommand(string $command, array $options = [], int $outputType = self::OUTPUT_TYPE_NORMAL): bool|string
     {
-        return $this->runCommand([
-            'docker',
-            'compose',
-            $command,
-            ...$options
-        ]);
+        return $this->runCommand(
+            [
+                'docker',
+                'compose',
+                $command,
+                ...$options
+            ],
+            $outputType
+        );
     }
 
     /**
@@ -153,8 +172,9 @@ final class DockerService
      * Usually one of self::CONTAINER_WEBSERVER or self::CONTAINER_DATABASE
      * @param string $copyFrom Full file path to copy from in the container.
      * @param string $copyTo Full file path to copy to on the host.
+     * @param int $outputType One of the OUTPUT_TYPE constants.
      */
-    public function copyFromContainer(string $container, string $copyFrom, string $copyTo): bool
+    public function copyFromContainer(string $container, string $copyFrom, string $copyTo, int $outputType = self::OUTPUT_TYPE_NORMAL): bool|string
     {
         $command = [
             'docker',
@@ -162,12 +182,13 @@ final class DockerService
             $this->env->getName() . $container . ":$copyFrom",
             $copyTo,
         ];
-        return $this->runCommand($command);
+        return $this->runCommand($command, $outputType);
     }
 
     /**
      * Run some command in the webserver docker container - optionally as root.
-     * @throws InvalidArgumentException
+     *
+     * @throws InvalidArgumentException if $exec is an empty string.
      */
     public function exec(
         string $exec,
@@ -175,17 +196,18 @@ final class DockerService
         bool $asRoot = false,
         bool $interactive = true,
         $container = self::CONTAINER_WEBSERVER,
-        bool $returnOutput = false
+        int $outputType = self::OUTPUT_TYPE_NORMAL
     ): bool|string
     {
         if (empty($exec)) {
             throw new InvalidArgumentException('$exec cannot be an empty string');
         }
+        $shouldOutput = $this->shouldOutputToTerminal($outputType);
         $execCommand = [
             'docker',
             'exec',
-            ...(!$returnOutput && Process::isTtySupported() ? ['-t'] : []),
-            ...(!$returnOutput && $interactive ? ['-i'] : []),
+            ...($shouldOutput && Process::isTtySupported() ? ['-t'] : []),
+            ...($shouldOutput && $interactive ? ['-i'] : []),
             ...($workingDir !== null ? ['--workdir', $workingDir] : []),
             ...($workingDir === null && $container === self::CONTAINER_WEBSERVER ? ['--workdir', '/var/www'] : []),
             ...($asRoot ? [] : ['-u', '1000']), // @TODO we'll need to get the same user as is declared for www-data, in case there's multiple users on the machine where the command is run
@@ -196,24 +218,50 @@ final class DockerService
             '-c',
             $exec,
         ];
-        return $this->runCommand($execCommand, $interactive, $returnOutput);
+        return $this->runCommand($execCommand, $outputType);
     }
 
-    private function runCommand(array $command, bool $returnOutput = false): bool|string
+    private function runCommand(array $command, int $outputType = self::OUTPUT_TYPE_NORMAL): bool|string
     {
-        // If returning output, pipe stderr into stdout.
-        if ($returnOutput) {
-            $command[] = '2>&1';
-        }
+        $this->output->writeln('Running command in docker container: "' . implode(' ', $command) . '"', OutputInterface::VERBOSITY_DEBUG);
 
+        $shouldOutput = $this->shouldOutputToTerminal($outputType);
         $process = new Process($command, $this->env->getDockerDir());
         $process->setTimeout(null);
-        if (!$returnOutput && Process::isTtySupported()) {
+
+        if ($shouldOutput && Process::isTtySupported()) {
             $process->setTty(true);
         }
 
-        $process->run();
+        $callback = function($type, $data) use ($shouldOutput, $outputType) {
+            if ($shouldOutput) {
+                $this->output->write($data);
+            } elseif ($this->output->isDebug() && $outputType === self::OUTPUT_TYPE_RETURN) {
+                $this->output->write("Docker output: $data");
+            } else {
+                $this->output->advanceProgressBar();
+            }
+        };
+        $useCallback = !Process::isTtySupported() || !$shouldOutput;
 
-        return $returnOutput ? $process->getOutput() : $process->isSuccessful();
+        $process->run($useCallback ? $callback : null);
+
+        return $outputType === self::OUTPUT_TYPE_RETURN ? $process->getOutput() : $process->isSuccessful();
+    }
+
+    private function shouldOutputToTerminal(int $outputType): bool
+    {
+        switch ($outputType) {
+            case self::OUTPUT_TYPE_RETURN:
+                return false;
+            case self::OUTPUT_TYPE_ALWAYS:
+                return true;
+            case self::OUTPUT_TYPE_DEBUG:
+                return $this->output->isDebug();
+            case self::OUTPUT_TYPE_NORMAL:
+                return $this->output->stepWillOutput();
+            default:
+                throw new InvalidArgumentException('$outputType must be one of the OUTPUT_TYPE constants');
+        }
     }
 }

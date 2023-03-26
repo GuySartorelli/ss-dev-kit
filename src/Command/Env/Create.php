@@ -11,7 +11,9 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use RuntimeException;
 use Silverstripe\DevStarterKit\Application;
+use Silverstripe\DevStarterKit\IO\StepLevel;
 use Silverstripe\DevStarterKit\Trait\UsesDocker;
+use Silverstripe\DevStarterKit\Utility\DockerService;
 use SplFileInfo;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -89,14 +91,14 @@ class Create extends BaseCommand
 
     protected function rollback(): void
     {
-        $this->io->error('Error occurred, rolling back...');
+        $this->output->endStep(StepLevel::Command, 'Error occurred, rolling back...', success: false);
         if ($this->env && file_exists(Path::join($this->env->getDockerDir(), 'docker-compose.yml'))) {
-            $this->io->writeln(self::STYLE_STEP . 'Tearing down docker' . self::STYLE_CLOSE);
+            $this->output->writeln('Tearing down docker');
             $this->getDockerService()->down(true, true);
         }
-        $this->io->writeln(self::STYLE_STEP . 'Deleting project dir' . self::STYLE_CLOSE);
+        $this->output->writeln('Deleting project dir');
         $this->filesystem->remove($this->env->getProjectRoot());
-        $this->io->writeln(self::STYLE_STEP . 'Rollback successful' . self::STYLE_CLOSE);
+        $this->output->writeln('Rollback successful');
     }
 
     /**
@@ -104,23 +106,26 @@ class Create extends BaseCommand
      */
     protected function doExecute(): int
     {
+        // @TODO change this depending on if attach mode is used
+        $this->output->startStep(StepLevel::Command, 'Creating new environment');
+
         $this->env = new Environment($this->input->getArgument('env-path'), isNew: true);
         $this->env->setPort($this->findPort());
         // @TODO validate project path is empty first! If not empty, recommend using the attach command instead.
 
         // Raw environment dir setup
-        $failureCode = $this->prepareProjectRoot();
-        if ($failureCode) {
+        $success = $this->prepareProjectRoot();
+        if (!$success) {
             $this->rollback();
-            return $failureCode;
+            return Command::FAILURE;
         }
 
         // Docker stuff
-        $failureCode = $this->spinUpDocker();
-        // @TODO better failure handling that doesn't rely on these esoteric return values
-        if ($failureCode) {
+        $success = $this->spinUpDocker();
+        // @TODO better failure handling - probably just throw some exception
+        if (!$success) {
             $this->rollback();
-            return $failureCode;
+            return Command::FAILURE;
         }
 
         // @TODO Need a step here to wait to make sure the docker container is actually ready to be used!!
@@ -130,17 +135,17 @@ class Create extends BaseCommand
         $this->setPHPVersion();
 
         // Composer
-        $failureCode = $this->runComposerCommands();
-        if ($failureCode) {
+        $success = $this->runComposerCommands();
+        if (!$success) {
             $this->rollback();
-            return $failureCode;
+            return Command::FAILURE;
         }
 
         // app/_config, etc
-        $failureCode = $this->copyWebrootFiles();
-        if ($failureCode) {
+        $success = $this->copyWebrootFiles();
+        if (!$success) {
             $this->rollback();
-            return $failureCode;
+            return Command::FAILURE;
         }
 
         // Run dev/build
@@ -148,16 +153,16 @@ class Create extends BaseCommand
 
         // @TODO explicit composer audit
 
-        $this->io->success('Completed successfully.');
         $url = $this->env->getBaseURL();
-        $this->io->writeln(self::STYLE_STEP . "Navigate to <href=$url>$url</>" . self::STYLE_CLOSE);
-        // @TODO consider other output that might be useful here (port used, etc)... maybe a full `ss-dev-starter-kit info`?
+        // @TODO consider other output that might be useful here... maybe a full `ss-dev-starter-kit info`?
+        $this->output->endStep(StepLevel::Command, 'Completed successfully.');
+        $this->output->writeln("Navigate to <href=$url>$url</>");
         return Command::SUCCESS;
     }
 
     protected function prepareProjectRoot(): bool
     {
-        $this->io->writeln(self::STYLE_STEP . 'Preparing project directory' . self::STYLE_CLOSE);
+        $this->output->startStep(StepLevel::Primary, 'Preparing project directory');
         $projectRoot = $this->env->getProjectRoot();
         $mkDirs = [];
         if (!is_dir($projectRoot)) {
@@ -174,23 +179,23 @@ class Create extends BaseCommand
             $this->filesystem->mirror($copyFrom, $metaDir);
         } catch (IOException $e) {
             // @TODO replace this with more standardised error/failure handling.
-            $this->io->error("Couldn't create environment directory: {$e->getMessage()}");
-            if ($this->io->isDebug()) {
-                $this->io->writeln($e->getTraceAsString());
-            }
-            return Command::FAILURE;
+            $this->output->endStep(StepLevel::Primary, "Couldn't create environment directory: {$e->getMessage()}", false);
+            $this->output->writeln($e->getTraceAsString(), OutputInterface::VERBOSITY_DEBUG);
+            return false;
         }
-        return false;
+
+        $this->output->endStep(StepLevel::Primary);
+        return true;
     }
 
-    protected function spinUpDocker(): int|bool
+    protected function spinUpDocker(): bool
     {
-        $this->io->writeln(self::STYLE_STEP . 'Spinning up docker' . self::STYLE_CLOSE);
+        $this->output->startStep(StepLevel::Primary, 'Spinning up docker');
         // @TODO have a "it's us silverstripe devs" mode that builds out a local copy of the main dockerfile before all of those?
         // Useful to validate local changes e.g. when we add new PHP versions - but not strictly necessary, as we can just do that manually
         // cd dockerdir && docker build -t silverstripe/dev-starter-kit # or whatever
         try {
-            $this->io->writeln(self::STYLE_STEP . 'Preparing docker directory' . self::STYLE_CLOSE);
+            $this->output->writeln('Preparing docker directory');
             // Setup docker files
             $dockerDir = $this->env->getDockerDir();
             $copyFrom = Path::join(Application::getCopyDir(), 'docker');
@@ -200,150 +205,158 @@ class Create extends BaseCommand
             $templateRoot = Path::join(Application::getTemplateDir(), 'docker');
             $this->renderTemplateDir($templateRoot, $dockerDir);
         } catch (IOException $e) {
-            $this->io->error('Couldn\'t set up docker or webroot files: ' . $e->getMessage());
-            if ($this->io->isDebug()) {
-                $this->io->writeln($e->getTraceAsString());
-            }
-            return Command::FAILURE;
+            $this->output->endStep(StepLevel::Primary, "Couldn't set up docker or webroot files: {$e->getMessage()}", false);
+            $this->output->writeln($e->getTraceAsString(), OutputInterface::VERBOSITY_DEBUG);
+            return false;
         }
 
-        $this->io->writeln(self::STYLE_STEP . 'Starting docker containers' . self::STYLE_CLOSE);
+        $this->output->startStep(StepLevel::Secondary, 'Starting docker containers');
         $success = $this->getDockerService()->up(true);
+        $this->output->endStep(StepLevel::Secondary);
         if (!$success) {
-            $this->io->error('Couldn\'t start docker containers.');
-            return Command::FAILURE;
+            $this->output->endStep(StepLevel::Primary, 'Couldn\'t start docker containers', false);
+            return false;
         }
 
-        return false;
+        $this->output->endStep(StepLevel::Primary);
+        return true;
     }
 
     protected function buildDatabase(): bool
-    {// @TODO The unable to build the db block should be output with `--no-install` as well.
+    {
+        // @TODO The unable to build the db block should be output with `--no-install` as well.
+        $this->output->startStep(StepLevel::Primary, 'Building database');
+
         if (!str_contains($this->input->getOption('composer-options') ?? '', '--no-install')) {
             // run vendor/bin/sake dev/build in the docker container
-            $this->io->writeln(self::STYLE_STEP . 'Building database.' . self::STYLE_CLOSE);
-            $sakeReturn = $this->runDockerCommand('vendor/bin/sake dev/build');
-        } else {
-            $sakeReturn = Command::INVALID;
-        }
-        if ($sakeReturn !== Command::SUCCESS) {
-            $url = "{$this->env->getBaseURL()}/dev/build";
+            $success = $this->getDockerService()->exec('vendor/bin/sake dev/build', outputType: DockerService::OUTPUT_TYPE_DEBUG);
 
-            // Can't use $this->io->warning() because it escapes the link into plain text
-            $this->io->block([
-                'Unable to build the db.',
-                "Build the db by going to <href=$url>$url</>",
-                'Or run: dev-tools sake dev/build -p ' . $this->env->getProjectRoot(),
-            ], 'WARNING', 'fg=black;bg=yellow', ' ', true, false);
+            if (!$success) {
+                $url = "{$this->env->getBaseURL()}/dev/build";
+
+                // Can't use $this->output->warning() because it escapes the link into plain text
+                $this->output->block(
+                    [
+                        'Unable to build the db.',
+                        "Build the db by going to <href=$url>$url</>",
+                        'Or run: dev-tools sake dev/build -p ' . $this->env->getProjectRoot(),
+                    ],
+                    type: 'WARNING',
+                    style: 'fg=black;bg=yellow',
+                    padding: true,
+                    escape: false,
+                    verbosity: OutputInterface::VERBOSITY_NORMAL
+                );
+            }
         }
-        return $sakeReturn === Command::SUCCESS;
+
+        $this->output->endStep(StepLevel::Primary, success: $success);
+        return $success;
     }
 
-    protected function copyWebrootFiles(): int|bool
+    protected function copyWebrootFiles(): bool
     {
-        $this->io->writeln(self::STYLE_STEP . '?????? Need good line for "copying files"' . self::STYLE_CLOSE);
+        $this->output->startStep(StepLevel::Primary, 'Copying extra files into project root');
 
         $projectDir = $this->env->getProjectRoot();
 
         // @TODO Some files may already exist if we're attaching or cloning
-        // In those cases, do a best-effort merge
-        // The files we care about for those purposes are:
-        // behat.yml
+        // In those cases, ASK if we should replace them. Default to not replacing.
 
         try {
             // Setup environment-specific web files
-            $this->io->writeln(self::STYLE_STEP . 'Preparing extra webroot files' . self::STYLE_CLOSE);
+            $this->output->writeln('Preparing extra webroot files');
             // Copy files that don't rely on variables
             $this->filesystem->mirror(Path::join(Application::getCopyDir(), 'webroot'), $projectDir, options: ['override' => true]);
             // Render twig templates for anything else
             $templateRoot = Path::join(Application::getTemplateDir(), 'webroot');
             $this->renderTemplateDir($templateRoot, $projectDir);
         } catch (IOException $e) {
-            $this->io->error('Couldn\'t set up webroot files: ' . $e->getMessage());
-            if ($this->io->isVeryVerbose()) {
-                $this->io->writeln($e->getTraceAsString());
-            }
-            return Command::FAILURE;
+            $this->output->endStep(StepLevel::Primary, "Couldn't set up webroot files: {$e->getMessage()}", false);
+            $this->output->writeln($e->getTraceAsString(), OutputInterface::VERBOSITY_DEBUG);
+            return false;
         }
 
         // @TODO add to .gitignore if not already present:
         // - /.ss-dev-starter-kit/
         // - /silverstripe-cache/
 
-        return false;
+        $this->output->endStep(StepLevel::Primary);
+        return true;
     }
 
     protected function setPHPVersion()
     {
-        $this->io->writeln(self::STYLE_STEP . 'Setting appropriate PHP version.' . self::STYLE_CLOSE);
+        $this->output->startStep(StepLevel::Primary, 'Setting appropriate PHP version');
         if ($phpVersion = $this->input->getOption('php-version')) {
             if (PHPService::versionIsAvailable($phpVersion)) {
                 $this->usePHPVersion($phpVersion);
-            } else {
-                $this->io->warning("PHP $phpVersion is not available. Using default.");
+                $this->output->endStep(StepLevel::Primary);
+                return;
             }
-            return;
+
+            $this->output->warning("PHP $phpVersion is not available. Falling back to auto-detection");
         }
 
         // Get the php version for the selected recipe and version
         $recipe = $this->input->getOption('recipe');
         $command = "composer show -a -f json {$recipe} {$this->input->getOption('constraint')}";
-        $dockerReturn = $this->runDockerCommand($command, returnOutput: true);
-        if ($dockerReturn === Command::FAILURE) {
-            $this->io->warning('Could not fetch PHP version from composer. Using default.');
+        $dockerReturn = $this->getDockerService()->exec($command, outputType: DockerService::OUTPUT_TYPE_RETURN);
+        if (!$dockerReturn) {
+            $this->output->warning('Could not fetch PHP version from composer. Using default');
+            $this->output->endStep(StepLevel::Primary, success: false);
             return;
         }
         // Rip out any composer nonsense before the JSON actually starts, then parse
         $composerJson = json_decode(preg_replace('/^[^{]*/', '', $dockerReturn), true);
         if (!isset($composerJson['requires']['php'])) {
-            $this->io->warning("$recipe doesn't have an explicit PHP dependency to check against. Using default.");
-            returnhttps://github.com/search?q=repo%3Asymfony-cli%2Fsymfony-cli%20FindAvailablePort&type=code;
+            $this->output->warning("$recipe doesn't have an explicit PHP dependency to check against. Using default");
+            $this->output->endStep(StepLevel::Primary, success: false);
+            return;
         }
         $constraint = $composerJson['requires']['php'];
-        if ($this->io->isVerbose()) {
-            $this->io->writeln("Constraint for PHP is $constraint.");
-        }
+        $this->output->writeln("Composer constraint for PHP is <info>$constraint</info>.", OutputInterface::VERBOSITY_DEBUG);
 
         // Try each installed PHP version against the allowed versions
         foreach (PHPService::getAvailableVersions() as $phpVersion) {
             if (!Semver::satisfies($phpVersion, $constraint)) {
-                if ($this->io->isVerbose()) {
-                    $this->io->writeln("PHP $phpVersion doesn't satisfy the constraint. Skipping.");
-                }
+                $this->output->writeln("PHP <info>$phpVersion</info> doesn't satisfy the constraint. Skipping.", OutputInterface::VERBOSITY_DEBUG);
                 continue;
             }
             $this->usePHPVersion($phpVersion);
+            $this->output->endStep(StepLevel::Primary);
             return;
         }
 
-        $this->io->warning('Could not set PHP version. Using default.');
+        $this->output->warning('Could not set PHP version. Using default');
+        $this->output->endStep(StepLevel::Primary, success: false);
     }
 
     /**
      * Swap to a specific PHP version.
      * Note that because this restarts apache it sometimes results in the docker container exiting with non-0
      */
-    private function usePHPVersion(string $phpVersion): int
+    private function usePHPVersion(string $phpVersion): bool
     {
         $phpService = new PHPService($this->env, $this->output);
         return $phpService->swapToVersion($phpVersion);
     }
 
-    protected function runComposerCommands(): int|bool
+    protected function runComposerCommands(): bool
     {
-        $this->io->writeln(self::STYLE_STEP . 'Building composer project' . self::STYLE_CLOSE);
+        $this->output->startStep(StepLevel::Primary, 'Building composer project');
 
-        $this->io->writeln(self::STYLE_STEP . 'Making temporary directory' . self::STYLE_CLOSE);
+        $this->output->writeln('Making temporary directory');
         $tmpDir = '/tmp/composer-create-project-' . time();
-        $this->runDockerCommand("mkdir $tmpDir");
+        $this->getDockerService()->exec("mkdir $tmpDir", outputType: DockerService::OUTPUT_TYPE_DEBUG);
 
         if ($githubToken = getenv('DT_GITHUB_TOKEN')) {
-            $this->io->writeln(self::STYLE_STEP . 'Adding github token to composer' . self::STYLE_CLOSE);
+            $this->output->writeln('Adding github token to composer');
             // @TODO is there any chance of this resulting in the token leaking? How to avoid that if so?
             // @TODO OMIT IT FROM "running command X in docker container" OUTPUT!!!
-            $failureCode = $this->runDockerCommand("composer config -g github-oauth.github.com $githubToken");
-            if ($failureCode !== Command::SUCCESS) {
-                return $failureCode;
+            $success = $this->getDockerService()->exec("composer config -g github-oauth.github.com $githubToken", outputType: DockerService::OUTPUT_TYPE_DEBUG);
+            if (!$success) {
+                return false;
             }
         }
 
@@ -353,30 +366,31 @@ class Create extends BaseCommand
         $composerCommand = $this->prepareComposerCommand('create-project');
 
         // Run composer command
-        $result = $this->runDockerCommand(implode(' ', $composerCommand), workingDir: $tmpDir);
-        if ($result !== Command::SUCCESS) {
-            $this->io->error('Couldn\'t create composer project.');
-            return $result;
+        $success = $this->getDockerService()->exec(implode(' ', $composerCommand), workingDir: $tmpDir, outputType: DockerService::OUTPUT_TYPE_DEBUG);
+        if (!$success) {
+            $this->output->endStep(StepLevel::Primary, 'Couldn\'t create composer project.', false);
+            return false;
         }
 
-        $this->io->writeln(self::STYLE_STEP . 'Copying composer project from temporary directory' . self::STYLE_CLOSE);
-        $this->runDockerCommand("cp -r $tmpDir/* /var/www/");
+        $this->output->writeln('Copying composer project from temporary directory');
+        $this->getDockerService()->exec("cp -r $tmpDir/* /var/www/", outputType: DockerService::OUTPUT_TYPE_DEBUG);
 
-        $this->io->writeln(self::STYLE_STEP . 'Removing temporary directory' . self::STYLE_CLOSE);
-        $this->runDockerCommand("rm -rf $tmpDir");
+        $this->output->writeln('Removing temporary directory');
+        $this->getDockerService()->exec("rm -rf $tmpDir", outputType: DockerService::OUTPUT_TYPE_DEBUG);
 
         // Install optional modules if appropriate
         foreach ($this->input->getOption('extra-modules') as $module) {
-            $result = $result ?: $this->includeOptionalModule($module);
+            $success = $success && $this->includeOptionalModule($module);
         }
 
         // Only returns $result if it represents a failure
-        return $result ?: false;
+        $this->output->endStep(StepLevel::Primary, success: $success);
+        return $success;
     }
 
-    private function includeOptionalModule(string $moduleName)
+    private function includeOptionalModule(string $moduleName): bool
     {
-        $this->io->writeln(self::STYLE_STEP . "Adding optional module $moduleName" . self::STYLE_CLOSE);
+        $this->output->startStep(StepLevel::Secondary, "Adding optional module </info>$moduleName</info>");
         $composerCommand = [
             'composer',
             'require',
@@ -385,11 +399,13 @@ class Create extends BaseCommand
         ];
 
         // Run composer command
-        $result = $this->runDockerCommand(implode(' ', $composerCommand));
-        if ($result !== Command::SUCCESS) {
-            $this->io->error("Couldn't require '$moduleName'.");
-            return $result;
+        $success = $this->getDockerService()->exec(implode(' ', $composerCommand), outputType: DockerService::OUTPUT_TYPE_DEBUG);
+        if (!$success) {
+            $this->output->endStep(StepLevel::Secondary, "Couldn't require '$moduleName'.", false);
+            return false;
         }
+        $this->output->endStep(StepLevel::Secondary);
+        return true;
     }
 
     /**
@@ -441,6 +457,8 @@ class Create extends BaseCommand
      */
     protected function renderTemplateDir(string $templateRoot, string $renderTo): void
     {
+        $renderDirName = basename($renderTo);
+        $this->output->startStep(StepLevel::Secondary, "Rendering templates into <info>$renderDirName</info>");
         $dirs = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($templateRoot));
         foreach ($dirs as $file) {
             /** @var SplFileInfo $file */
@@ -452,6 +470,7 @@ class Create extends BaseCommand
             $outputPath = Path::makeAbsolute($templateRelative, $renderTo);
             $this->filesystem->dumpFile($outputPath, $this->renderTemplate($template));
         }
+        $this->output->endStep(StepLevel::Secondary, 'Finished rendering templates');
     }
 
     /**
@@ -459,6 +478,8 @@ class Create extends BaseCommand
      */
     protected function renderTemplate(string $template): string
     {
+        $templateName = basename($template);
+        $this->output->writeln("Rendering <info>$templateName</info>");
         // Prepare template variables
         $hostname = $this->env->getHostName();
         $hostParts = explode('.', $hostname);
@@ -488,6 +509,7 @@ class Create extends BaseCommand
             // Use the port the user declared
             return $port;
         } else {
+            $this->output->writeln('Finding port');
             // Let PHP find an available port to bind to
             $socket = socket_create(AF_INET, SOCK_STREAM, 0);
             if (!$socket) {
@@ -502,6 +524,7 @@ class Create extends BaseCommand
                 throw new LogicException('Could not find open port: ' . socket_strerror(socket_last_error($socket)));
             }
             socket_close($socket);
+            $this->output->writeln("Using port <info>$port</info>");
             return $port;
         }
     }
