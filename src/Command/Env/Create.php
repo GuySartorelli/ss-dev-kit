@@ -227,7 +227,7 @@ class Create extends BaseCommand
         // @TODO The unable to build the db block should be output with `--no-install` as well.
         $this->output->startStep(StepLevel::Primary, 'Building database');
 
-        if (!str_contains($this->input->getOption('composer-options') ?? '', '--no-install')) {
+        if (!in_array('--no-install', $this->input->getOption('composer-option'))) {
             // run vendor/bin/sake dev/build in the docker container
             $success = $this->getDockerService()->exec('vendor/bin/sake dev/build', outputType: DockerService::OUTPUT_TYPE_DEBUG);
 
@@ -379,7 +379,7 @@ class Create extends BaseCommand
         $this->getDockerService()->exec("rm -rf $tmpDir", outputType: DockerService::OUTPUT_TYPE_DEBUG);
 
         // Install optional modules if appropriate
-        foreach ($this->input->getOption('extra-modules') as $module) {
+        foreach ($this->input->getOption('extra-module') as $module) {
             $success = $success && $this->includeOptionalModule($module);
         }
 
@@ -418,7 +418,7 @@ class Create extends BaseCommand
             $this->composerArgs = [
                 '--no-interaction',
                 '--no-progress',
-                ...explode(' ', $this->input->getOption('composer-options') ?? '')
+                ...$this->input->getOption('composer-option')
             ];
         }
         $args = $this->composerArgs;
@@ -611,7 +611,7 @@ class Create extends BaseCommand
         );
         // @TODO add include-recipe-testing back in?
         $this->addOption(
-            'extra-modules',
+            'extra-module',
             'm',
             InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY,
             'Any additional modules to be required before dev/build.',
@@ -619,9 +619,9 @@ class Create extends BaseCommand
         );
         // TODO make this singular, and let it be an array
         $this->addOption(
-            'composer-options',
+            'composer-option',
             'o',
-            InputOption::VALUE_REQUIRED,
+            InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY,
             'Any additional arguments to be passed to the composer create-project command.'
         );
         $this->addOption(
