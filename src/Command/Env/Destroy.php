@@ -88,7 +88,7 @@ class Destroy extends BaseCommand
     {
         $this->output->startStep(StepLevel::Primary, 'Taking down docker');
 
-        $success = $this->getDockerService()->down(true, true);
+        $success = $this->getDockerService()->down(removeOrphans: true, images: true, volumes: true);
         if (!$success) {
             $this->output->endStep(StepLevel::Primary, 'Problem occured while stopping docker containers.', false);
             return false;
