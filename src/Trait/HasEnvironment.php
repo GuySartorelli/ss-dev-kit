@@ -3,7 +3,7 @@
 namespace Silverstripe\DevStarterKit\Trait;
 
 use LogicException;
-use Silverstripe\DevStarterKit\Utility\Environment;
+use Silverstripe\DevStarterKit\Environment\Environment;
 use Symfony\Component\Filesystem\Path;
 
 /**

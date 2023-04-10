@@ -2,7 +2,7 @@
 
 namespace Silverstripe\DevStarterKit\Trait;
 
-use Silverstripe\DevStarterKit\Utility\DockerService;
+use Silverstripe\DevStarterKit\Environment\DockerService;
 
 trait UsesDocker
 {

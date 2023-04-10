@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Silverstripe\DevStarterKit\Utility;
+namespace Silverstripe\DevStarterKit\Environment;
 
 use RuntimeException;
 use Silverstripe\DevStarterKit\IO\CommandOutput;

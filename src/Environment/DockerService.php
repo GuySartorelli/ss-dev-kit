@@ -1,6 +1,6 @@
 <?php
 
-namespace Silverstripe\DevStarterKit\Utility;
+namespace Silverstripe\DevStarterKit\Environment;
 
 use InvalidArgumentException;
 use Silverstripe\DevStarterKit\IO\CommandOutput;
@@ -269,24 +269,34 @@ final class DockerService
         $process->setTimeout(null);
 
         if ($useTty) {
-            $process->setTty(true);
-        }
-
-        $callback = function($type, $data) use ($shouldOutput, $outputType) {
-            if ($shouldOutput) {
-                $this->output->write($data);
-            } elseif ($this->output->isDebug() && $outputType === self::OUTPUT_TYPE_RETURN) {
-                $this->output->write("Docker output: $data");
-            } else {
-                $this->output->advanceProgressBar();
-            }
-        };
-
-        if ($useTty) {
+            // TTY output is dumped directly into the terminal
             $this->output->clearProgressBar();
+            $process->setTty(true);
+            $process->run();
+        } else {
+            // Start the process, with a callback to handle output
+            $process->start(
+                function($type, $data) use ($shouldOutput, $outputType) {
+                    if ($shouldOutput) {
+                        $this->output->write($data);
+                    } elseif ($this->output->isDebug() && $outputType === self::OUTPUT_TYPE_RETURN) {
+                        $this->output->write("Docker output: $data");
+                    } else {
+                        $this->output->advanceProgressBar();
+                    }
+                }
+            );
+            // Advance the progressbar every second if we're not using the actual output
+            if (!$shouldOutput) {
+                while ($process->isRunning()) {
+                    $process->checkTimeout();
+                    $this->output->advanceProgressBar();
+                    usleep(1000);
+                }
+            }
+            // Make absolutely sure the process has finished
+            $process->wait();
         }
-
-        $process->run($useTty ? null : $callback);
 
         return $outputType === self::OUTPUT_TYPE_RETURN ? $process->getOutput() : $process->isSuccessful();
     }
@@ -295,6 +305,8 @@ final class DockerService
     {
         switch ($outputType) {
             case self::OUTPUT_TYPE_RETURN:
+                // We do want to output returned data in debug mode, but if we return true here and TTY is enabled
+                // we won't be able to capture and therefore return the data
                 return false;
             case self::OUTPUT_TYPE_ALWAYS:
                 return true;

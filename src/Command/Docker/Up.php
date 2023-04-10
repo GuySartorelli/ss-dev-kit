@@ -7,7 +7,7 @@ use Silverstripe\DevStarterKit\Trait\HasEnvironment;
 use Silverstripe\DevStarterKit\Trait\UsesDocker;
 use Symfony\Component\Console\Command\Command;
 use Silverstripe\DevStarterKit\IO\StepLevel;
-use Silverstripe\DevStarterKit\Utility\DockerService;
+use Silverstripe\DevStarterKit\Environment\DockerService;
 use Symfony\Component\Console\Input\InputOption;
 
 /**
