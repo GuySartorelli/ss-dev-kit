@@ -264,10 +264,11 @@ final class DockerService
         $this->output->writeln('Running command in docker container: "' . implode(' ', $command) . '"', OutputInterface::VERBOSITY_DEBUG);
 
         $shouldOutput = $this->shouldOutputToTerminal($outputType);
+        $useTty = $shouldOutput && Process::isTtySupported();
         $process = new Process($command, $this->env->getDockerDir());
         $process->setTimeout(null);
 
-        if ($shouldOutput && Process::isTtySupported()) {
+        if ($useTty) {
             $process->setTty(true);
         }
 
@@ -280,13 +281,12 @@ final class DockerService
                 $this->output->advanceProgressBar();
             }
         };
-        $useCallback = !Process::isTtySupported() || !$shouldOutput;
 
-        if (!$useCallback) {
+        if ($useTty) {
             $this->output->clearProgressBar();
         }
 
-        $process->run($useCallback ? $callback : null);
+        $process->run($useTty ? null : $callback);
 
         return $outputType === self::OUTPUT_TYPE_RETURN ? $process->getOutput() : $process->isSuccessful();
     }
