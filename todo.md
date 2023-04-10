@@ -45,6 +45,10 @@
 - Info command should check if mailhog is running (check the pid in `/home/www-data/mailhog.pid`)
 - Is there a way to get mailhog to run under some path (e.g. `http://localhost:8080/__mailhog`) for when we're using a port?
   - Yes, probably, via apache
+- Launch command - launches the environment in the default browser
+  - Inspired by https://github.com/ddev/ddev
+  - Works for any given OS
+  - Include this as an option for env:create to auto-launch on successful creation
 
 ## Output
 

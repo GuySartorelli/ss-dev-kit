@@ -28,9 +28,12 @@ $application->addCommands([
     new Command\Env\Destroy(),
     // new Command\Env\Info(), // maybe this is the default for the config command (i.e. no options), instead of its own command?
     // new Command\Env\Config(), // change php version, toggle xdebug, etc
-    // new Command\Docker\Up(), // docker compose up -d
-    // new Command\Docker\Down(), // docker compose down (with options e.g. -v)
-    // new Command\Docker\Exec(), // execute commands in a docker container (web server by default) (with options e.g. --root --interactive)
+    new Command\Docker\Up(),
+    new Command\Docker\Down(),
+    new Command\Docker\Start(),
+    new Command\Docker\Stop(),
+    new Command\Docker\Restart(),
+    new Command\Docker\Exec(),
     // new Command\Cli\Sake(),
     // new Command\Cli\LintPhp(),
     // new Command\Cli\Phpunit(), // Do we want a behat command as well? May as well, right?

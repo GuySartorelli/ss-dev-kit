@@ -94,7 +94,7 @@ class Create extends BaseCommand
         $this->output->endStep(StepLevel::Command, 'Error occurred, rolling back...', success: false);
         if ($this->env && file_exists(Path::join($this->env->getDockerDir(), 'docker-compose.yml'))) {
             $this->output->writeln('Tearing down docker');
-            $this->getDockerService()->down(true, true);
+            $this->getDockerService()->down(removeOrphans: true, images: true, volumes: true);
         }
         $this->output->writeln('Deleting project dir');
         $this->filesystem->remove($this->env->getProjectRoot());
@@ -211,7 +211,7 @@ class Create extends BaseCommand
         }
 
         $this->output->startStep(StepLevel::Secondary, 'Starting docker containers');
-        $success = $this->getDockerService()->up(true);
+        $success = $this->getDockerService()->up(build: true);
         $this->output->endStep(StepLevel::Secondary);
         if (!$success) {
             $this->output->endStep(StepLevel::Primary, 'Couldn\'t start docker containers', false);

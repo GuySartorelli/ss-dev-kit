@@ -33,9 +33,9 @@ final class DockerService
      */
     public const OUTPUT_TYPE_ALWAYS = 3;
 
-    public const CONTAINER_WEBSERVER = '_webserver';
+    public const CONTAINER_WEBSERVER = 'webserver';
 
-    public const CONTAINER_DATABASE = '_database';
+    public const CONTAINER_DATABASE = 'database';
 
     public function __construct(Environment $environment, CommandOutput $output)
     {
@@ -84,11 +84,37 @@ final class DockerService
     /**
      * Create and start docker containers
      */
-    public function up(bool $fullBuild = false, int $outputType = self::OUTPUT_TYPE_NORMAL): bool|string
+    public function up(
+        bool $build = false,
+        bool $noBuild = false,
+        bool $forceRecreate = false,
+        bool $noRecreate = false,
+        bool $removeOrphans = false,
+        int $outputType = self::OUTPUT_TYPE_NORMAL
+    ): bool|string
     {
+        if ($build && $noBuild) {
+            throw new InvalidArgumentException('Cann use build and no-build at the same time');
+        }
+        if ($forceRecreate && $noRecreate) {
+            throw new InvalidArgumentException('Cann use force-recreate and no-recreate at the same time');
+        }
+
         $options = [];
-        if ($fullBuild) {
+        if ($build) {
             $options[] = '--build';
+        }
+        if ($noBuild) {
+            $options[] = '--no-build';
+        }
+        if ($forceRecreate) {
+            $options[] = '--force-recreate';
+        }
+        if ($noRecreate) {
+            $options[] = '--no-recreate';
+        }
+        if ($removeOrphans) {
+            $options[] = '--remove-orphans';
         }
         $options[] = '-d';
 
@@ -102,9 +128,12 @@ final class DockerService
      * @param bool $volumes Remove named volumes declared in the volumes section of the Compose file and anonymous volumes attached to containers
      * @param int $outputType One of the OUTPUT_TYPE constants.
      */
-    public function down(bool $images = false, bool $volumes = false, int $outputType = self::OUTPUT_TYPE_NORMAL): bool|string
+    public function down(bool $removeOrphans = false, bool $images = false, bool $volumes = false, int $outputType = self::OUTPUT_TYPE_NORMAL): bool|string
     {
-        $options = ['--remove-orphans'];
+        $options = [];
+        if ($removeOrphans) {
+            $options[] = '--remove-orphans';
+        }
         if ($volumes) {
             $options[] = '--volumes';
         }
@@ -136,14 +165,22 @@ final class DockerService
      *
      * If no container is passed in, it restarts everything.
      */
-    public function restart(string $container = '', ?int $timeout = null, int $outputType = self::OUTPUT_TYPE_NORMAL): bool|string
+    public function restart(
+        string $container = '',
+        bool $noDeps = false,
+        ?int $timeout = null,
+        int $outputType = self::OUTPUT_TYPE_NORMAL
+    ): bool|string
     {
         $options = [];
+        if ($noDeps) {
+            $options[] = '--no-deps';
+        }
         if ($timeout !== null) {
             $options[] = "-t$timeout";
         }
         if ($container) {
-            $options[] = ltrim($container, '_');
+            $options[] = $container;
         }
 
         return $this->dockerComposeCommand('restart', $options, $outputType);
@@ -179,7 +216,7 @@ final class DockerService
         $command = [
             'docker',
             'cp',
-            $this->env->getName() . $container . ":$copyFrom",
+            $this->env->getName() . "_$container:$copyFrom",
             $copyTo,
         ];
         return $this->runCommand($command, $outputType);
@@ -205,13 +242,14 @@ final class DockerService
         $shouldOutput = $this->shouldOutputToTerminal($outputType);
         $execCommand = [
             'docker',
+            'compose',
             'exec',
             ...($shouldOutput && Process::isTtySupported() ? ['-t'] : []),
             ...($shouldOutput && $interactive ? ['-i'] : []),
             ...($workingDir !== null ? ['--workdir', $workingDir] : []),
             ...($workingDir === null && $container === self::CONTAINER_WEBSERVER ? ['--workdir', '/var/www'] : []),
             ...($asRoot ? [] : ['-u', '1000']), // @TODO we'll need to get the same user as is declared for www-data, in case there's multiple users on the machine where the command is run
-            $this->env->getName() . $container,
+            $container,
             'env',
             'TERM=xterm-256color',
             'bash',
@@ -243,6 +281,10 @@ final class DockerService
             }
         };
         $useCallback = !Process::isTtySupported() || !$shouldOutput;
+
+        if (!$useCallback) {
+            $this->output->clearProgressBar();
+        }
 
         $process->run($useCallback ? $callback : null);
 

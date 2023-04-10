@@ -44,7 +44,7 @@ class CommandOutput implements OutputInterface
             throw new LogicException("Must be on a $needLevel step to start a $badLevel step.");
         }
 
-        $this->tryClearProgressBar($this->stepLevel);
+        $this->tryEndProgressBar($this->stepLevel);
 
         if ($this->stepWillOutput()) {
             $this->stepMessage($stepLevel, $message);
@@ -71,7 +71,7 @@ class CommandOutput implements OutputInterface
 
         $newStepLevel = $stepLevel->previous();
 
-        $this->tryClearProgressBar($newStepLevel);
+        $this->tryEndProgressBar($newStepLevel);
 
         if ($success) {
             if ($stepLevel === StepLevel::Command) {
@@ -128,7 +128,7 @@ class CommandOutput implements OutputInterface
     {
         $verbosity = $this->getVerbosityForOutput($options);
         if ($this->io->getVerbosity() >= $verbosity) {
-            $this->progressBar?->clear();
+            $this->clearProgressBar();
             if (!$options && $this->stepLevel !== StepLevel::None) {
                 $messages = $this->formatAsStepLevel($messages, $this->stepLevel->next());
             }
@@ -145,7 +145,7 @@ class CommandOutput implements OutputInterface
     {
         $verbosity = $this->getVerbosityForOutput($options);
         if ($this->io->getVerbosity() >= $verbosity) {
-            $this->progressBar?->clear();
+            $this->clearProgressBar();
             if (!$options && $this->stepLevel !== StepLevel::None) {
                 $messages = $this->formatAsStepLevel($messages, $this->stepLevel->next());
             }
@@ -173,7 +173,7 @@ class CommandOutput implements OutputInterface
     {
         $verbosity = $this->getVerbosityForOutput($verbosity);
         if ($this->io->getVerbosity() >= $verbosity) {
-            $this->progressBar?->clear();
+            $this->clearProgressBar();
             if (!$verbosity && $this->stepLevel !== StepLevel::None) {
                 $messages = $this->formatAsStepLevel($messages, $this->stepLevel->next());
             }
@@ -213,7 +213,7 @@ class CommandOutput implements OutputInterface
      */
     public function error(string|array $message): void
     {
-        $this->progressBar?->clear();
+        $this->clearProgressBar();
         $this->io->error($message);
     }
 
@@ -224,7 +224,7 @@ class CommandOutput implements OutputInterface
      */
     public function warning(string|array $message): void
     {
-        $this->progressBar?->clear();
+        $this->clearProgressBar();
         $this->io->warning($message);
     }
 
@@ -235,7 +235,7 @@ class CommandOutput implements OutputInterface
      */
     public function ask(string $question, string $default = null, callable $validator = null): mixed
     {
-        $this->progressBar?->clear();
+        $this->clearProgressBar();
         return $this->io->ask($question, $default, $validator);
     }
 
@@ -337,9 +337,19 @@ class CommandOutput implements OutputInterface
     }
 
     /**
+     * Clears the current progress bar (if any) from the console.
+     *
+     * Useful if we need to output something directly while a progress bar may be running.
+     */
+    public function clearProgressBar(): void
+    {
+        $this->progressBar?->clear();
+    }
+
+    /**
      * Clears and unsets the progressbar, but ONLY if we're swapping off a step that had visible output.
      */
-    private function tryClearProgressBar(StepLevel $stepLevel): void
+    private function tryEndProgressBar(StepLevel $stepLevel): void
     {
         if ($this->progressBar !== null && $this->stepWillOutput($stepLevel)) {
             $this->progressBar->finish();
