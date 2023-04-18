@@ -26,7 +26,6 @@ $application->addCommands([
     // new Command\??\Proxy(), // see https://symfony.com/doc/current/setup/symfony_server.html#setting-up-the-local-proxy
     new Command\Env\Create(),
     new Command\Env\Destroy(),
-    // new Command\Env\Config(), // change php version, toggle xdebug, etc
     new Command\Env\Details(),
     new Command\Docker\Up(),
     new Command\Docker\Down(),
@@ -34,6 +33,7 @@ $application->addCommands([
     new Command\Docker\Stop(),
     new Command\Docker\Restart(),
     new Command\Docker\Exec(),
+    new Command\Infrastructure\PhpConfig(),
     // new Command\Cli\Sake(),
     // new Command\Cli\LintPhp(),
     // new Command\Cli\Phpunit(), // Do we want a behat command as well? May as well, right?
