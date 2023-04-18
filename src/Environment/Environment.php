@@ -3,8 +3,8 @@
 namespace Silverstripe\DevStarterKit\Environment;
 
 use LogicException;
-use stdClass;
 use Symfony\Component\Filesystem\Path;
+use Symfony\Component\Yaml\Yaml;
 
 final class Environment
 {
@@ -45,10 +45,17 @@ final class Environment
 
     public function getPort(): ?int
     {
-        if (isset($this->port)) {
-            return $this->port;
+        if (!isset($this->port)) {
+            $composeData = $this->getDockerComposeData();
+            $ports = $composeData['services']['webserver']['ports'] ?? [];
+            foreach ($ports as $portMap) {
+                list($localPort, $containerPort) = explode(':', $portMap);
+                if ($containerPort === '80') {
+                    $this->port = (int) $localPort;
+                }
+            }
         }
-        // @TODO Get the port from the meta directory
+        return $this->port ?? null;
     }
 
     public function getProjectRoot(): string
@@ -95,6 +102,18 @@ final class Environment
     public function exists(): bool
     {
         return is_dir($this->getProjectRoot());
+    }
+
+    /**
+     * Parse and return the docker-compose.yml file contents
+     */
+    public function getDockerComposeData(): array
+    {
+        $filePath = Path::join($this->getDockerDir(), 'docker-compose.yml');
+        if (is_file($filePath)) {
+            return Yaml::parseFile($filePath);
+        }
+        return [];
     }
 
     private function setProjectRoot(string $candidate, bool $isNew, bool $allowMissing): void
