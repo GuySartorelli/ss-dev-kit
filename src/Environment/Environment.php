@@ -59,14 +59,14 @@ final class Environment
     /**
      * Gets the absolute path to the starter kit directory inside a given project environment
      */
-    public function getmetaDir(): string
+    public function getMetaDir(): string
     {
         return Path::join($this->getProjectRoot(), self::ENV_META_DIR);
     }
 
     public function getDockerDir(): string
     {
-        return Path::join($this->getmetaDir(), 'docker');
+        return Path::join($this->getMetaDir(), 'docker');
     }
 
     public function getName(): string
@@ -89,7 +89,7 @@ final class Environment
 
     public function isAttachedEnv()
     {
-        return file_exists(Path::join($this->getmetaDir(), self::ATTACHED_ENV_FILE));
+        return file_exists(Path::join($this->getMetaDir(), self::ATTACHED_ENV_FILE));
     }
 
     public function exists(): bool

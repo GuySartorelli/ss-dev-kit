@@ -169,7 +169,7 @@ class Create extends BaseCommand
             $mkDirs[] = $projectRoot;
         }
         try {
-            $mkDirs[] = $metaDir = $this->env->getmetaDir();
+            $mkDirs[] = $metaDir = $this->env->getMetaDir();
             $this->filesystem->mkdir(array_merge($mkDirs, [
                 Path::join($metaDir, 'logs'),
                 Path::join($metaDir, 'logs/apache2'),
