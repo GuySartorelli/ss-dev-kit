@@ -9,7 +9,7 @@
 - add phpcs config and fix linting issues
 - peripheral commands (docker, info, php)
 
-## Get a decent create command started
+## Create command
 
 - Move port into the .env file. Makes it easier to change and _potentially_ easier to fetch
 - If we don't already, validate that we're not trying to create inside an existing environment. Nested environments are not supported.
@@ -37,6 +37,7 @@
 - Don't do the first composer install if we have forks or additional modules
   - instead, `create-project` must have `--no-install`, as should each `require` statement.
   - Do a final `composer install` after everything is finally settled (unless `--no-install` is in compsoer args option)
+- Add a `--no-dev-build` option (useful for restoring an existing db instead or using populate)
 
 ## Other commands
 
@@ -52,8 +53,6 @@
 
 ## Output
 
-- Make sure docker and other service output is appropriately only output during the relevant verbosity level
-  - When not output, it must advance the progress bar
 - Have clean global error handling
   - According to symfony docs "The full exception stacktrace is printed if the VERBOSITY_VERBOSE level or above is used." - find out how to change that so it only happens in debug mode. Verbose is for users of the system, the stack trace is for debugging the system.
 

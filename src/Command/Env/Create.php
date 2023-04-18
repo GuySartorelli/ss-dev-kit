@@ -346,10 +346,6 @@ class Create extends BaseCommand
     {
         $this->output->startStep(StepLevel::Primary, 'Building composer project');
 
-        $this->output->writeln('Making temporary directory');
-        $tmpDir = '/tmp/composer-create-project-' . time();
-        $this->getDockerService()->exec("mkdir $tmpDir", outputType: DockerService::OUTPUT_TYPE_DEBUG);
-
         if ($githubToken = getenv('DT_GITHUB_TOKEN')) {
             $this->output->writeln('Adding github token to composer');
             // @TODO is there any chance of this resulting in the token leaking? How to avoid that if so?
@@ -359,6 +355,10 @@ class Create extends BaseCommand
                 return false;
             }
         }
+
+        $this->output->writeln('Making temporary directory');
+        $tmpDir = '/tmp/composer-create-project-' . time();
+        $this->getDockerService()->exec("mkdir $tmpDir", outputType: DockerService::OUTPUT_TYPE_DEBUG);
 
         // @TODO explicitly use `--no-install` - do a separate explicit `composer install` at the end of the composer stuff.
         // Alternatively, only use `--no-install` in create-project if there are more composer stuff to do (which is already how it works, except it doesn't respect `--module`)
@@ -617,7 +617,6 @@ class Create extends BaseCommand
             'Any additional modules to be required before dev/build.',
             []
         );
-        // TODO make this singular, and let it be an array
         $this->addOption(
             'composer-option',
             'o',

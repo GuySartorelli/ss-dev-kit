@@ -172,7 +172,7 @@ class CommandOutput implements OutputInterface
     ): void
     {
         $verbosity = $this->getVerbosityForOutput($verbosity);
-        if ($this->io->getVerbosity() >= $verbosity) {
+        if ($this->getVerbosity() >= $verbosity) {
             $this->clearProgressBar();
             if (!$verbosity && $this->stepLevel !== StepLevel::None) {
                 $messages = $this->formatAsStepLevel($messages, $this->stepLevel->next());

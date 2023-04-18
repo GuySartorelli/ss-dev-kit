@@ -157,7 +157,11 @@ class PHPService
             return false;
         }
 
-        return $this->getDockerService()->restart(DockerService::CONTAINER_WEBSERVER, timeout: 0);
+        return $this->getDockerService()->restart(
+            DockerService::CONTAINER_WEBSERVER,
+            timeout: 0,
+            outputType: DockerService::OUTPUT_TYPE_DEBUG
+        );
     }
 
     /**
