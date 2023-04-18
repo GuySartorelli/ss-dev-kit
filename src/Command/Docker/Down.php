@@ -35,7 +35,7 @@ class Down extends BaseCommand
 
         $success = $this->getDockerService()->down(
             $this->input->getOption('remove-orphans'),
-            $this->input->getOption('images'),
+            $this->input->getOption('rmi'),
             $this->input->getOption('volumes'),
             DockerService::OUTPUT_TYPE_ALWAYS,
         );
