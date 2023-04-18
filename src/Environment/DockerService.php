@@ -71,11 +71,11 @@ final class DockerService
         }
 
         $containers = [
-            'webserver container' => 'missing',
-            'database container' => 'missing',
+            self::CONTAINER_WEBSERVER => 'missing',
+            self::CONTAINER_DATABASE => 'missing',
         ];
         foreach (json_decode($process->getOutput(), true) as $container) {
-            $name = str_replace($this->env->getName() . '_', '', $container['Name']) . ' container';
+            $name = str_replace($this->env->getName() . '_', '', $container['Name']);
             $containers[$name] = $container['State'];
         }
         return $containers;

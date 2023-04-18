@@ -184,6 +184,23 @@ class CommandOutput implements OutputInterface
     }
 
     /**
+     * Formats a horizontal table.
+     *
+     * @param bool $verbosity Output this block in a specific verbosity, bypassing step levels.
+     * Should be one of the VERBOSITY constants.
+     */
+    public function horizontalTable(array $headers, array $rows, int $verbosity = 0): void
+    {
+        $verbosity = $this->getVerbosityForOutput($verbosity);
+        if ($this->getVerbosity() >= $verbosity) {
+            $this->clearProgressBar();
+            $this->io->horizontalTable($headers, $rows);
+        } else {
+            $this->advanceProgressBar();
+        }
+    }
+
+    /**
      * Format some output in the style of a given step level
      */
     private function formatAsStepLevel(string|iterable $messages, ?StepLevel $stepLevel)

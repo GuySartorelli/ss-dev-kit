@@ -26,8 +26,8 @@ $application->addCommands([
     // new Command\??\Proxy(), // see https://symfony.com/doc/current/setup/symfony_server.html#setting-up-the-local-proxy
     new Command\Env\Create(),
     new Command\Env\Destroy(),
-    // new Command\Env\Info(), // maybe this is the default for the config command (i.e. no options), instead of its own command?
     // new Command\Env\Config(), // change php version, toggle xdebug, etc
+    new Command\Env\Details(),
     new Command\Docker\Up(),
     new Command\Docker\Down(),
     new Command\Docker\Start(),
