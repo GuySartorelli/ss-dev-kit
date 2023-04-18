@@ -324,7 +324,7 @@ class CommandOutput implements OutputInterface
         if ($this->progressBar === null) {
             $this->progressBar = $this->io->createProgressBar();
             $this->progressBar->setFormat('%elapsed:10s% %bar% %message%');
-            $this->progressBar->setBarWidth(5);
+            $this->progressBar->setBarWidth(10);
             $this->progressBar->setMessage('');
         }
         $this->progressBar->display();
