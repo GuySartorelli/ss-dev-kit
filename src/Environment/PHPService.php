@@ -4,7 +4,7 @@ namespace Silverstripe\DevStarterKit\Environment;
 
 use RuntimeException;
 use Silverstripe\DevStarterKit\IO\CommandOutput;
-use Silverstripe\DevStarterKit\Trait\UsesDocker;
+use Silverstripe\DevStarterKit\Environment\UsesDocker;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Output\OutputInterface;
 

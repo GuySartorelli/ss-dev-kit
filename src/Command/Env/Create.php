@@ -12,7 +12,7 @@ use RecursiveIteratorIterator;
 use RuntimeException;
 use Silverstripe\DevStarterKit\Application;
 use Silverstripe\DevStarterKit\IO\StepLevel;
-use Silverstripe\DevStarterKit\Trait\UsesDocker;
+use Silverstripe\DevStarterKit\Environment\UsesDocker;
 use Silverstripe\DevStarterKit\Environment\DockerService;
 use SplFileInfo;
 use Symfony\Component\Console\Command\Command;

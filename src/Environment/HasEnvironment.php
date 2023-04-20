@@ -1,9 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace Silverstripe\DevStarterKit\Trait;
+namespace Silverstripe\DevStarterKit\Environment;
 
 use LogicException;
-use Silverstripe\DevStarterKit\Environment\Environment;
 use Symfony\Component\Filesystem\Path;
 
 /**

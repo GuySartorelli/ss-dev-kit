@@ -4,7 +4,7 @@ namespace Silverstripe\DevStarterKit\Command;
 
 use Exception;
 use Silverstripe\DevStarterKit\IO\CommandOutput;
-use Silverstripe\DevStarterKit\Trait\HasEnvironment;
+use Silverstripe\DevStarterKit\Environment\HasEnvironment;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;

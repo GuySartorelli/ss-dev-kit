@@ -3,8 +3,8 @@
 namespace Silverstripe\DevStarterKit\Command\Env;
 
 use Silverstripe\DevStarterKit\Command\BaseCommand;
-use Silverstripe\DevStarterKit\Trait\HasEnvironment;
-use Silverstripe\DevStarterKit\Trait\UsesDocker;
+use Silverstripe\DevStarterKit\Environment\HasEnvironment;
+use Silverstripe\DevStarterKit\Environment\UsesDocker;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
