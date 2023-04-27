@@ -1,0 +1,3 @@
+Silverstripe\DevStarterKit\Application:
+  commands:
+    - '8eight'

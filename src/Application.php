@@ -2,12 +2,27 @@
 
 namespace Silverstripe\DevStarterKit;
 
+use Silverstripe\DevStarterKit\Config\Config;
+use Silverstripe\DevStarterKit\Config\Configurable;
 use Symfony\Component\Console\Application as ConsoleApplication;
 use Symfony\Component\Dotenv\Dotenv;
 use Symfony\Component\Filesystem\Path;
 
 class Application extends ConsoleApplication
 {
+    use Configurable;
+
+    private static array $configSchema = [
+        'commands' => [
+            'type' => 'array',
+            'default' => [
+                'one' => '1one',
+                'two' => '2two',
+                'three' => '3three',
+            ],
+        ]
+    ];
+
     public static function bootstrap(): void
     {
         set_time_limit(0);
@@ -27,6 +42,8 @@ class Application extends ConsoleApplication
         $envConfig = new Dotenv();
         $envConfig->usePutenv(true);
         $envConfig->bootEnv(Path::join($rootDir, '.env'));
+
+        Config::boot([Path::join($rootDir, 'testconfig')]);
     }
 
     /**
