@@ -14,6 +14,7 @@ use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Path;
 use RuntimeException;
 use Silverstripe\DevStarterKit\IO\StepLevel;
+use Symfony\Component\Console\Input\InputOption;
 
 /**
  * Code which destroys a dockerised local development environment
@@ -71,16 +72,30 @@ class Destroy extends BaseCommand
             return Command::FAILURE;
         }
 
-        // Delete environment directory
-        try {
-            $this->output->writeln('Removing environment directory');
-            $this->filesystem->remove($this->env->getProjectRoot());
-        } catch (IOException $e) {
-            $this->output->endStep(StepLevel::Command, "Couldn't delete environment directory: {$e->getMessage()}", false);
-            return Command::FAILURE;
+        if ($this->input->getOption('detach')) {
+            // Delete environment-specific directories
+            // @TODO also clean up .env and other stuff we shoved in the webroot
+            $this->output->writeln('Deleting devkit-specific directories');
+            try {
+                $this->filesystem->remove($this->env->getDockerDir());
+                $this->filesystem->remove($this->env->getMetaDir());
+            } catch (IOException $e) {
+                $this->output->endStep(StepLevel::Command, "Couldn't delete directory: {$e->getMessage()}", false);
+                return Command::FAILURE;
+            }
+        } else {
+            // Delete environment directory
+                $this->output->writeln('Removing environment directory');
+            try {
+                $this->filesystem->remove($this->env->getProjectRoot());
+            } catch (IOException $e) {
+                $this->output->endStep(StepLevel::Command, "Couldn't delete environment directory: {$e->getMessage()}", false);
+                return Command::FAILURE;
+            }
         }
 
-        $this->output->endStep(StepLevel::Command, 'Environment successfully destroyed.');
+        $destroyedOrDetached = $this->input->getOption('detach') ? 'detached' : 'destroyed';
+        $this->output->endStep(StepLevel::Command, "Environment successfully $destroyedOrDetached.");
         return Command::SUCCESS;
     }
 
@@ -118,6 +133,13 @@ class Destroy extends BaseCommand
             InputArgument::OPTIONAL,
             'The full path to the directory of the environment to destroy.',
             './'
+        );
+        $this->addOption(
+            'detach',
+            'd',
+            InputOption::VALUE_NEGATABLE,
+            'detach the docker environment but do not remove the project directory.',
+            false,
         );
     }
 }

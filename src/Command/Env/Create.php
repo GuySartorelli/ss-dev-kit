@@ -71,22 +71,76 @@ class Create extends BaseCommand
     protected function initialize(InputInterface $input, OutputInterface $output)
     {
         parent::initialize($input, $output);
-        // @TODO move these checks into the new validate method
+        $this->normaliseRecipe();
+        $this->validateOptions();
+        $this->filesystem = new Filesystem();
+        // Do this in initialise so that if there are any issues loading the template dir
+        // we error out early
+        $twigLoader = new FilesystemLoader(Application::getTemplateDir());
+        $this->twig = new TwigEnvironment($twigLoader);
+    }
+
+    /**
+     * Normalises the recipe to be installed based on static::$recipeShortcuts
+     */
+    private function normaliseRecipe(): void
+    {
+        $recipe = $this->input->getOption('recipe');
+        if (isset(static::$recipeShortcuts[$recipe])) {
+            $this->input->setOption('recipe', static::$recipeShortcuts[$recipe]);
+        }
+    }
+
+    private function validateOptions()
+    {
         // @TODO don't allow creating a new env (unless using attach mode) if there's ANYTHING in the project dir
         $projectPath = $this->input->getArgument('env-path');
+        if (Path::isAbsolute($projectPath)) {
+            $projectPath = Path::canonicalize($projectPath);
+        } else {
+           $projectPath = Path::makeAbsolute($projectPath, getcwd());
+        }
         if (is_dir($projectPath) && Environment::dirIsInEnv($projectPath)) {
             throw new RuntimeException('Project path is inside an existing environment. Cannot create nested environments.');
         }
         if (is_file($projectPath)) {
             throw new RuntimeException('Project path must not be a file.');
         }
-        // @TODO convert the normalise methods into a generalised validate method
-        $this->normaliseRecipe();
-        $this->filesystem = new Filesystem();
-        // Do this in initialise so that if there are any issues loading the template dir
-        // we error out early
-        $twigLoader = new FilesystemLoader(Application::getTemplateDir());
-        $this->twig = new TwigEnvironment($twigLoader);
+
+        // @TODO also check for a composer.json file?
+        if ($this->input->getOption('attach') && !is_dir($projectPath)) {
+            throw new RuntimeException('Project path must exist when --attach is used');
+        }
+
+        if ($this->input->getOption('attach') && $this->input->getOption('clone')) {
+            throw new RuntimeException('Cannot use --attach and --clone together');
+        }
+
+        if ($this->input->getOption('port') && $this->input->getOption('no-port')) {
+            throw new RuntimeException('Cannot use --port and --no-port together');
+        }
+
+        // @TODO find a clean way to validate db version? Or just let that error out at a docker level?
+        // @TODO make this configurable when we have plugins
+        $validDbDrivers = [
+            'mysql',
+            'mariadb',
+        ];
+        if (!in_array($this->input->getOption('db'), $validDbDrivers)) {
+            throw new RuntimeException('--db must be one of ' . implode(', ', $validDbDrivers));
+        }
+
+        $phpVersion = $this->input->getOption('php-version');
+        if ($phpVersion !== null && !PHPService::versionIsAvailable($phpVersion)) {
+            throw new RuntimeException("PHP version $phpVersion is not available. Use one of " . implode(', ', PHPService::getAvailableVersions()));
+        }
+
+        // see https://getcomposer.org/doc/04-schema.md#name for regex
+        if (!preg_match('%^[a-z0-9]([_.-]?[a-z0-9]+)*/[a-z0-9](([_.]?|-{0,2})[a-z0-9]+)*$%', $this->input->getOption('recipe'))) {
+            throw new LogicException('recipe must be a valid composer package name.');
+        }
+
+        // @TODO validate constraint using composer/semver
     }
 
     protected function rollback(): void
@@ -96,8 +150,15 @@ class Create extends BaseCommand
             $this->output->writeln('Tearing down docker');
             $this->getDockerService()->down(removeOrphans: true, images: true, volumes: true);
         }
-        $this->output->writeln('Deleting project dir');
-        $this->filesystem->remove($this->env->getProjectRoot());
+        if ($this->input->getOption('attach')) {
+            // @TODO clean up things like .env, .vscode/ and other webroot files/dirs we've messed with
+            $this->output->writeln('Deleting devkit-specific directories');
+            $this->filesystem->remove($this->env->getDockerDir());
+            $this->filesystem->remove($this->env->getMetaDir());
+        } else {
+            $this->output->writeln('Deleting project dir');
+            $this->filesystem->remove($this->env->getProjectRoot());
+        }
         $this->output->writeln('Rollback successful');
     }
 
@@ -106,12 +167,16 @@ class Create extends BaseCommand
      */
     protected function doExecute(): int
     {
-        // @TODO change this depending on if attach mode is used
-        $this->output->startStep(StepLevel::Command, 'Creating new environment');
+        $msg = 'Creating new project and attaching environment';
+        if ($this->input->getOption('attach')) {
+            $msg = 'Attaching environment to existing project';
+        } elseif ($this->input->getOption('clone')) {
+            $msg = 'Cloning project and attaching environment';
+        }
+        $this->output->startStep(StepLevel::Command, $msg);
 
         $this->env = new Environment($this->input->getArgument('env-path'), isNew: true);
         $this->env->setPort($this->findPort());
-        // @TODO validate project path is empty first! If not empty, recommend using the attach command instead.
 
         // Raw environment dir setup
         $success = $this->prepareProjectRoot();
@@ -128,20 +193,21 @@ class Create extends BaseCommand
             return Command::FAILURE;
         }
 
-        // @TODO Need a step here to wait to make sure the docker container is actually ready to be used!!
-        // Otherwise the first docker command tends to fail!
-
-        // @TODO do this as part of the docker image instead
+        // @TODO set default PHP version as part of the docker image instead
         $this->setPHPVersion();
 
         // Composer
-        $success = $this->runComposerCommands();
-        if (!$success) {
-            $this->rollback();
-            return Command::FAILURE;
+        if (!$this->input->getOption('attach')) {
+            $success = $this->buildComposerProject();
+            if (!$success) {
+                $this->rollback();
+                return Command::FAILURE;
+            }
         }
+        $this->addExtraModules();
 
-        // app/_config, etc
+
+        // metadir/_config, etc
         $success = $this->copyWebrootFiles();
         if (!$success) {
             $this->rollback();
@@ -163,9 +229,13 @@ class Create extends BaseCommand
     protected function prepareProjectRoot(): bool
     {
         $this->output->startStep(StepLevel::Primary, 'Preparing project directory');
+        $isAttachMode = $this->input->getOption('attach');
         $projectRoot = $this->env->getProjectRoot();
         $mkDirs = [];
         if (!is_dir($projectRoot)) {
+            if ($isAttachMode) {
+                throw new RuntimeException('Project root must exist with --attach is used');
+            }
             $mkDirs[] = $projectRoot;
         }
         try {
@@ -205,7 +275,7 @@ class Create extends BaseCommand
             $templateRoot = Path::join(Application::getTemplateDir(), 'docker');
             $this->renderTemplateDir($templateRoot, $dockerDir);
         } catch (IOException $e) {
-            $this->output->endStep(StepLevel::Primary, "Couldn't set up docker or webroot files: {$e->getMessage()}", false);
+            $this->output->endStep(StepLevel::Primary, "Couldn't set up docker files: {$e->getMessage()}", false);
             $this->output->writeln($e->getTraceAsString(), OutputInterface::VERBOSITY_DEBUG);
             return false;
         }
@@ -222,7 +292,7 @@ class Create extends BaseCommand
         return true;
     }
 
-    protected function buildDatabase(): bool
+    protected function buildDatabase()
     {
         // @TODO The unable to build the db block should be output with `--no-install` as well.
         $this->output->startStep(StepLevel::Primary, 'Building database');
@@ -251,7 +321,6 @@ class Create extends BaseCommand
         }
 
         $this->output->endStep(StepLevel::Primary, success: $success);
-        return $success;
     }
 
     protected function copyWebrootFiles(): bool
@@ -288,9 +357,11 @@ class Create extends BaseCommand
     protected function setPHPVersion()
     {
         $this->output->startStep(StepLevel::Primary, 'Setting appropriate PHP version');
+        $phpService = new PHPService($this->env, $this->output);
+
         if ($phpVersion = $this->input->getOption('php-version')) {
             if (PHPService::versionIsAvailable($phpVersion)) {
-                $this->usePHPVersion($phpVersion);
+                $phpService->swapToVersion($phpVersion);
                 $this->output->endStep(StepLevel::Primary);
                 return;
             }
@@ -298,51 +369,43 @@ class Create extends BaseCommand
             $this->output->warning("PHP $phpVersion is not available. Falling back to auto-detection");
         }
 
-        // Get the php version for the selected recipe and version
-        $recipe = $this->input->getOption('recipe');
-        $command = "composer show -a -f json {$recipe} {$this->input->getOption('constraint')}";
-        $dockerReturn = $this->getDockerService()->exec($command, outputType: DockerService::OUTPUT_TYPE_RETURN);
-        if (!$dockerReturn) {
-            $this->output->warning('Could not fetch PHP version from composer. Using default');
-            $this->output->endStep(StepLevel::Primary, success: false);
-            return;
-        }
-        // Rip out any composer nonsense before the JSON actually starts, then parse
-        $composerJson = json_decode(preg_replace('/^[^{]*/', '', $dockerReturn), true);
-        if (!isset($composerJson['requires']['php'])) {
-            $this->output->warning("$recipe doesn't have an explicit PHP dependency to check against. Using default");
-            $this->output->endStep(StepLevel::Primary, success: false);
-            return;
-        }
-        $constraint = $composerJson['requires']['php'];
-        $this->output->writeln("Composer constraint for PHP is <info>$constraint</info>.", OutputInterface::VERBOSITY_DEBUG);
-
-        // Try each installed PHP version against the allowed versions
-        foreach (PHPService::getAvailableVersions() as $phpVersion) {
-            if (!Semver::satisfies($phpVersion, $constraint)) {
-                $this->output->writeln("PHP <info>$phpVersion</info> doesn't satisfy the constraint. Skipping.", OutputInterface::VERBOSITY_DEBUG);
-                continue;
+        if (!$this->input->getOption('attach')) {
+            // Get the php version for the selected recipe and version
+            $recipe = $this->input->getOption('recipe');
+            $command = "composer show -a -f json {$recipe} {$this->input->getOption('constraint')}";
+            $dockerReturn = $this->getDockerService()->exec($command, outputType: DockerService::OUTPUT_TYPE_RETURN);
+            if (!$dockerReturn) {
+                $this->output->warning('Could not fetch PHP version from composer. Using default');
+                $this->output->endStep(StepLevel::Primary, success: false);
+                return;
             }
-            $this->usePHPVersion($phpVersion);
-            $this->output->endStep(StepLevel::Primary);
-            return;
+            // Rip out any composer nonsense before the JSON actually starts, then parse
+            $composerJson = json_decode(preg_replace('/^[^{]*/', '', $dockerReturn), true);
+            if (!isset($composerJson['requires']['php'])) {
+                $this->output->warning("$recipe doesn't have an explicit PHP dependency to check against. Using default");
+                $this->output->endStep(StepLevel::Primary, success: false);
+                return;
+            }
+            $constraint = $composerJson['requires']['php'];
+            $this->output->writeln("Composer constraint for PHP is <info>$constraint</info>.", OutputInterface::VERBOSITY_DEBUG);
+
+            // Try each installed PHP version against the allowed versions
+            foreach (PHPService::getAvailableVersions() as $phpVersion) {
+                if (!Semver::satisfies($phpVersion, $constraint)) {
+                    $this->output->writeln("PHP <info>$phpVersion</info> doesn't satisfy the constraint. Skipping.", OutputInterface::VERBOSITY_DEBUG);
+                    continue;
+                }
+                $phpService->swapToVersion($phpVersion);
+                $this->output->endStep(StepLevel::Primary);
+                return;
+            }
         }
 
         $this->output->warning('Could not set PHP version. Using default');
         $this->output->endStep(StepLevel::Primary, success: false);
     }
 
-    /**
-     * Swap to a specific PHP version.
-     * Note that because this restarts apache it sometimes results in the docker container exiting with non-0
-     */
-    private function usePHPVersion(string $phpVersion): bool
-    {
-        $phpService = new PHPService($this->env, $this->output);
-        return $phpService->swapToVersion($phpVersion);
-    }
-
-    protected function runComposerCommands(): bool
+    protected function buildComposerProject(): bool
     {
         $this->output->startStep(StepLevel::Primary, 'Building composer project');
 
@@ -378,14 +441,28 @@ class Create extends BaseCommand
         $this->output->writeln('Removing temporary directory');
         $this->getDockerService()->exec("rm -rf $tmpDir", outputType: DockerService::OUTPUT_TYPE_DEBUG);
 
-        // Install optional modules if appropriate
-        foreach ($this->input->getOption('extra-module') as $module) {
+        $this->output->endStep(StepLevel::Primary, success: $success);
+        return $success;
+    }
+
+    protected function addExtraModules()
+    {
+        $extraModules = $this->input->getOption('extra-module');
+        $success = true;
+
+        if (empty($extraModules)) {
+        }
+        $this->output->startStep(StepLevel::Primary, 'Installing additional modules');
+
+        foreach ($extraModules as $module) {
             $success = $success && $this->includeOptionalModule($module);
         }
 
-        // Only returns $result if it represents a failure
+        if (!$success) {
+            $this->output->warning('Failed to install at least one optional module. Please check your dependency constraints and install the module manually.');
+        }
+
         $this->output->endStep(StepLevel::Primary, success: $success);
-        return $success;
     }
 
     private function includeOptionalModule(string $moduleName): bool
@@ -529,21 +606,6 @@ class Create extends BaseCommand
         }
     }
 
-    /**
-     * Normalises the recipe to be installed based on static::$recipeShortcuts
-     */
-    protected function normaliseRecipe(): void
-    {
-        $recipe = $this->input->getOption('recipe');
-        if (isset(static::$recipeShortcuts[$recipe])) {
-            $this->input->setOption('recipe', static::$recipeShortcuts[$recipe]);
-        }
-        // see https://getcomposer.org/doc/04-schema.md#name for regex
-        if (!preg_match('%^[a-z0-9]([_.-]?[a-z0-9]+)*/[a-z0-9](([_.]?|-{0,2})[a-z0-9]+)*$%', $this->input->getOption('recipe'))) {
-            throw new LogicException('recipe must be a valid composer package name.');
-        }
-    }
-
     protected function getDefaultEnvName(): string
     {
         $invalidCharsRegex = '/[' . preg_quote(static::$invalidEnvNameChars, '/') . ']/';
@@ -576,21 +638,21 @@ class Create extends BaseCommand
             InputArgument::REQUIRED,
             'The path where the project environment will be created or attached to.'
         );
-        // @TODO add attach and clone functionality
-        // $this->addOption(
-        //     'attach',
-        //     'a',
-        //     InputOption::VALUE_NEGATABLE,
-        //     'Attach a docker environment to an existing silverstripe project directory. Cannot use clone and attach together.',
-        //     false,
-        // );
-        // $this->addOption(
-        //     'clone',
-        //     'g',
-        //     InputArgument::REQUIRED,
-        //     'Use "git clone" to clone an existing silverstripe project from a remote git repository into env-path. Cannot use attach and clone together.',
-        //     false,
-        // );
+        $this->addOption(
+            'attach',
+            'a',
+            InputOption::VALUE_NEGATABLE,
+            'Attach a docker environment to an existing silverstripe project directory. Cannot use --clone and --attach together. --constraint and --recipe do nothing when this option is used.',
+            false,
+        );
+        // @TODO add clone functionality
+        $this->addOption(
+            'clone',
+            'g',
+            InputArgument::REQUIRED,
+            'Use "git clone" to clone an existing silverstripe project from a remote git repository into env-path. Cannot use --attach and --clone together. --constraint and --recipe do nothing when this option is used.',
+            false,
+        );
         $recipeDescription = '';
         foreach (static::$recipeShortcuts as $shortcut => $recipe) {
             $recipeDescription .= "\"$shortcut\" ($recipe), ";
