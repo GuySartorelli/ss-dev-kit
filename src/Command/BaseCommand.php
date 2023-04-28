@@ -41,6 +41,7 @@ abstract class BaseCommand extends Command
      */
     protected function initialize(InputInterface $input, OutputInterface $output)
     {
+        parent::initialize($input, $output);
         $this->input = $input;
         $this->output = new CommandOutput($input, $output);
 
