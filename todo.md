@@ -2,12 +2,19 @@
 
 ## IMMEDIATE NEXT STEPS
 
-- clone and attach modes for create command
-- unit tests for output
-- error and exception handling?
+- clone mode for create command
+- make sure this thing works on mac and WSL2
+- Deal with generalisation where necessary (e.g. UID and/or GID may not be 1000)
+- Add some _VERY_ basic documentation
+  - After this point, we can get some guinea pigs
 - deal with TODO comments in code
+- error and exception handling?
+- DB commands (dump and restore)
+- shortcut commands (composer, sake)
 - add phpcs config and fix linting issues
-- peripheral commands (docker, info, php)
+- documentation
+- basic unit tests
+  - After this point, it could be publically available
 
 ## Create command
 
@@ -41,11 +48,10 @@
 
 ## Other commands
 
-- Info command should show db type and version
 - Should Info command show the FULL php version (e.g. '8.1.17')?
 - Info command should check if mailhog is running (check the pid in `/home/www-data/mailhog.pid`)
 - Is there a way to get mailhog to run under some path (e.g. `http://localhost:8080/__mailhog`) for when we're using a port?
-  - Yes, probably, via apache
+  - Yes, probably, via apache proxy
 - Launch command - launches the environment in the default browser
   - Inspired by https://github.com/ddev/ddev
   - Works for any given OS
@@ -54,6 +60,8 @@
 ## Output
 
 - Have clean global error handling
+  - Promote errors to exceptions so we can catch them.
+  - Probably most places where I'm returning a success boolean should just thrown an exception on failure instead.
   - According to symfony docs "The full exception stacktrace is printed if the VERBOSITY_VERBOSE level or above is used." - find out how to change that so it only happens in debug mode. Verbose is for users of the system, the stack trace is for debugging the system.
 
 ## General things
