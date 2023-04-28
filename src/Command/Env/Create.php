@@ -198,8 +198,18 @@ class Create extends BaseCommand
         // @TODO set default PHP version as part of the docker image instead
         $this->setPHPVersion();
 
-        // Composer
-        if (!$this->input->getOption('attach')) {
+        // Share composer token
+        if ($githubToken = getenv('DT_GITHUB_TOKEN')) {
+            $this->output->writeln('Adding github token to composer');
+            // @TODO is there any chance of this resulting in the token leaking? How to avoid that if so?
+            // @TODO OMIT IT FROM "running command X in docker container" OUTPUT!!!
+            $this->getDockerService()->exec("composer config -g github-oauth.github.com $githubToken", outputType: DockerService::OUTPUT_TYPE_DEBUG);
+        }
+
+        // Install composer stuff
+        if ($this->input->getOption('attach')) {
+            $this->composerInstallIfNecessary();
+        } else {
             $success = $this->buildComposerProject();
             if (!$success) {
                 $this->rollback();
@@ -371,7 +381,17 @@ class Create extends BaseCommand
             $this->output->warning("PHP $phpVersion is not available. Falling back to auto-detection");
         }
 
-        if (!$this->input->getOption('attach')) {
+        if ($this->input->getOption('attach')) {
+            $composerJsonPath = Path::join($this->env->getProjectRoot(), 'composer.json');
+            if (!file_exists($composerJsonPath)) {
+                $this->output->warning('No composer.json file to determine PHP version. Using default');
+                $this->output->endStep(StepLevel::Primary, success: false);
+                return;
+            }
+            $composerRaw = file_get_contents($composerJsonPath);
+            $recipeOrProject = 'Project';
+            $require = 'require';
+        } else {
             // Get the php version for the selected recipe and version
             $recipe = $this->input->getOption('recipe');
             $command = "composer show -a -f json {$recipe} {$this->input->getOption('constraint')}";
@@ -381,45 +401,58 @@ class Create extends BaseCommand
                 $this->output->endStep(StepLevel::Primary, success: false);
                 return;
             }
-            // Rip out any composer nonsense before the JSON actually starts, then parse
-            $composerJson = json_decode(preg_replace('/^[^{]*/', '', $dockerReturn), true);
-            if (!isset($composerJson['requires']['php'])) {
-                $this->output->warning("$recipe doesn't have an explicit PHP dependency to check against. Using default");
-                $this->output->endStep(StepLevel::Primary, success: false);
-                return;
-            }
-            $constraint = $composerJson['requires']['php'];
-            $this->output->writeln("Composer constraint for PHP is <info>$constraint</info>.", OutputInterface::VERBOSITY_DEBUG);
+            // Rip out any composer nonsense before the JSON actually starts
+            $composerRaw = preg_replace('/^[^{]*/', '', $dockerReturn);
+            $recipeOrProject = $recipe;
+            $require = 'requires';
+        }
 
-            // Try each installed PHP version against the allowed versions
-            foreach (PHPService::getAvailableVersions() as $phpVersion) {
-                if (!Semver::satisfies($phpVersion, $constraint)) {
-                    $this->output->writeln("PHP <info>$phpVersion</info> doesn't satisfy the constraint. Skipping.", OutputInterface::VERBOSITY_DEBUG);
-                    continue;
-                }
-                $phpService->swapToVersion($phpVersion);
-                $this->output->endStep(StepLevel::Primary);
-                return;
+        // Check for php version constraint in composer json
+        $composerJson = json_decode($composerRaw, true);
+        if (!isset($composerJson[$require]['php'])) {
+            $this->output->warning("$recipeOrProject doesn't have an explicit PHP dependency to check against. Using default");
+            $this->output->endStep(StepLevel::Primary, success: false);
+            return;
+        }
+        $constraint = $composerJson[$require]['php'];
+        $this->output->writeln("Composer constraint for PHP is <info>$constraint</info>.", OutputInterface::VERBOSITY_DEBUG);
+
+        // Try each installed PHP version against the allowed versions
+        foreach (PHPService::getAvailableVersions() as $phpVersion) {
+            if (!Semver::satisfies($phpVersion, $constraint)) {
+                $this->output->writeln("PHP <info>$phpVersion</info> doesn't satisfy the constraint. Skipping.", OutputInterface::VERBOSITY_DEBUG);
+                continue;
             }
+            $phpService->swapToVersion($phpVersion);
+            $this->output->endStep(StepLevel::Primary);
+            return;
         }
 
         $this->output->warning('Could not set PHP version. Using default');
         $this->output->endStep(StepLevel::Primary, success: false);
     }
 
+    private function composerInstallIfNecessary()
+    {
+        if (is_dir(Path::join($this->env->getProjectRoot(), 'vendor')) || !file_exists(Path::join($this->env->getProjectRoot(), 'composer.json'))) {
+            $this->output->writeln('Composer dependencies already installed, or no composer.json file found.');
+            return true;
+        }
+        $this->output->startStep(StepLevel::Primary, 'Installing composer dependencies');
+
+        $composerCommand = $this->prepareComposerCommand('install');
+        $success = $this->getDockerService()->exec(implode(' ', $composerCommand), outputType: DockerService::OUTPUT_TYPE_DEBUG);
+        if (!$success) {
+            $this->output->endStep(StepLevel::Primary, 'Couldn\'t install dependencies. Run composer install manually.', false);
+            return false;
+        }
+
+        $this->output->endStep(StepLevel::Primary);
+    }
+
     protected function buildComposerProject(): bool
     {
         $this->output->startStep(StepLevel::Primary, 'Building composer project');
-
-        if ($githubToken = getenv('DT_GITHUB_TOKEN')) {
-            $this->output->writeln('Adding github token to composer');
-            // @TODO is there any chance of this resulting in the token leaking? How to avoid that if so?
-            // @TODO OMIT IT FROM "running command X in docker container" OUTPUT!!!
-            $success = $this->getDockerService()->exec("composer config -g github-oauth.github.com $githubToken", outputType: DockerService::OUTPUT_TYPE_DEBUG);
-            if (!$success) {
-                return false;
-            }
-        }
 
         $this->output->writeln('Making temporary directory');
         $tmpDir = '/tmp/composer-create-project-' . time();
@@ -450,12 +483,14 @@ class Create extends BaseCommand
     protected function addExtraModules()
     {
         $extraModules = $this->input->getOption('extra-module');
-        $success = true;
 
         if (empty($extraModules)) {
+            return;
         }
+
         $this->output->startStep(StepLevel::Primary, 'Installing additional modules');
 
+        $success = true;
         foreach ($extraModules as $module) {
             $success = $success && $this->includeOptionalModule($module);
         }
@@ -651,7 +686,7 @@ class Create extends BaseCommand
         $this->addOption(
             'clone',
             'g',
-            InputArgument::REQUIRED,
+            InputOption::VALUE_REQUIRED,
             'Use "git clone" to clone an existing silverstripe project from a remote git repository into env-path. Cannot use --attach and --clone together. --constraint and --recipe do nothing when this option is used.',
             false,
         );
