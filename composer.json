@@ -1,18 +1,18 @@
 {
-  "name": "guysartorelli/ss-dev-starter-kit",
+  "name": "guysartorelli/ss-dev-kit",
   "description": "Dev tools CLI for new Silverstripe developers",
   "license": "BSD-3-Clause",
   "bin": [
-    "bin/dev-tools"
+    "bin/ss-dev-kit"
   ],
   "autoload": {
     "psr-4": {
-      "Silverstripe\\DevStarterKit\\": "src/"
+      "Silverstripe\\DevKit\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "Silverstripe\\DevStarterKit\\Tests\\": "tests/"
+      "Silverstripe\\DevKit\\Tests\\": "tests/"
     }
   },
   "require": {

@@ -71,9 +71,9 @@
   - Unofficial way (also requires user to do some stuff - so why does this option exist?): <https://github.com/stecman/symfony-console-completion>
 - Use [events](https://kurozumi.github.io/symfony-docs/components/console/events.html) as appropriate - e.g. terminate event could make sure an environment being created via create command gets torn down if command terminated early.
 - Add a clean command shortcut system
-  - e.g. `starterkit composer` is a shortcut for `starterkit docker:exec composer`
-  - has a divider in `starterkit list` called "command shortcuts" similar to the "env" or "docker" dividers
-  - `starterkit help composer` works in an expected way (i.e. shows description for the shortcut with the appropriate args/options)
+  - e.g. `devkit composer` is a shortcut for `devkit docker:exec composer`
+  - has a divider in `devkit list` called "command shortcuts" similar to the "env" or "docker" dividers
+  - `devkit help composer` works in an expected way (i.e. shows description for the shortcut with the appropriate args/options)
   - Note that composer specifically might actually end up being its own command instead, and just pass all arguments/etc directly to composer. If so, have to make sure it can do autocomplete neatly too (when composer is installed natively - but also maybe pass through to the docker container and ask IT for autocomplete?).
 
 ## Eventually

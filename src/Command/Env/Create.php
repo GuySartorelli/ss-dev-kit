@@ -1,19 +1,19 @@
 <?php declare(strict_types=1);
 
-namespace Silverstripe\DevStarterKit\Command\Env;
+namespace Silverstripe\DevKit\Command\Env;
 
 use Composer\Semver\Semver;
-use Silverstripe\DevStarterKit\Command\BaseCommand;
-use Silverstripe\DevStarterKit\Environment\Environment;
-use Silverstripe\DevStarterKit\Environment\PHPService;
+use Silverstripe\DevKit\Command\BaseCommand;
+use Silverstripe\DevKit\Environment\Environment;
+use Silverstripe\DevKit\Environment\PHPService;
 use LogicException;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use RuntimeException;
-use Silverstripe\DevStarterKit\Application;
-use Silverstripe\DevStarterKit\IO\StepLevel;
-use Silverstripe\DevStarterKit\Environment\UsesDocker;
-use Silverstripe\DevStarterKit\Environment\DockerService;
+use Silverstripe\DevKit\Application;
+use Silverstripe\DevKit\IO\StepLevel;
+use Silverstripe\DevKit\Environment\UsesDocker;
+use Silverstripe\DevKit\Environment\DockerService;
 use SplFileInfo;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -232,7 +232,7 @@ class Create extends BaseCommand
         // @TODO explicit composer audit
 
         $url = $this->env->getBaseURL();
-        // @TODO consider other output that might be useful here... maybe a full `ss-dev-starter-kit info`?
+        // @TODO consider other output that might be useful here... maybe a full `ss-dev-kit info`?
         $this->output->endStep(StepLevel::Command, 'Completed successfully.');
         $this->output->writeln("Navigate to <href=$url>$url</>");
         return Command::SUCCESS;
@@ -275,7 +275,7 @@ class Create extends BaseCommand
         $this->output->startStep(StepLevel::Primary, 'Spinning up docker');
         // @TODO have a "it's us silverstripe devs" mode that builds out a local copy of the main dockerfile before all of those?
         // Useful to validate local changes e.g. when we add new PHP versions - but not strictly necessary, as we can just do that manually
-        // cd dockerdir && docker build -t silverstripe/dev-starter-kit # or whatever
+        // cd dockerdir && docker build -t silverstripe/ss-dev-kit # or whatever
         try {
             $this->output->writeln('Preparing docker directory');
             // Setup docker files
@@ -359,7 +359,7 @@ class Create extends BaseCommand
         }
 
         // @TODO add to .gitignore if not already present:
-        // - /.ss-dev-starter-kit/
+        // - /.ss-dev-kit/
         // - /silverstripe-cache/
 
         $this->output->endStep(StepLevel::Primary);

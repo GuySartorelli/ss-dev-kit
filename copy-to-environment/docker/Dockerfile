@@ -1,6 +1,6 @@
-FROM silverstripe/dev-starter-kit
+FROM silverstripe/ss-dev-kit
 # @TODO consider tags (e.g. :cms4 - so that when we remove PHP 7.4 and 8.0 people can keep using this tool)
-# Though probably just give instructions for running docker build -t silverstripe/dev-starter-kit so they have a local copy
+# Though probably just give instructions for running docker build -t silverstripe/ss-dev-kit so they have a local copy
 # of the old image in that case.
 
 # @TODO: Take the timezone from command options

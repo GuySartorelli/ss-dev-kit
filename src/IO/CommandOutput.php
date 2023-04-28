@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Silverstripe\DevStarterKit\IO;
+namespace Silverstripe\DevKit\IO;
 
 use LogicException;
 use Symfony\Component\Console\Formatter\OutputFormatterInterface;

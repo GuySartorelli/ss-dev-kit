@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Silverstripe\DevStarterKit\Environment;
+namespace Silverstripe\DevKit\Environment;
 
 use LogicException;
 use Symfony\Component\Filesystem\Path;

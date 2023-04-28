@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Silverstripe\DevStarterKit\Environment;
+namespace Silverstripe\DevKit\Environment;
 
 trait UsesDocker
 {

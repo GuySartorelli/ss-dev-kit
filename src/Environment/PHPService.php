@@ -1,11 +1,10 @@
 <?php declare(strict_types=1);
 
-namespace Silverstripe\DevStarterKit\Environment;
+namespace Silverstripe\DevKit\Environment;
 
 use RuntimeException;
-use Silverstripe\DevStarterKit\IO\CommandOutput;
-use Silverstripe\DevStarterKit\Environment\UsesDocker;
-use Symfony\Component\Console\Command\Command;
+use Silverstripe\DevKit\IO\CommandOutput;
+use Silverstripe\DevKit\Environment\UsesDocker;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class PHPService

@@ -1,5 +1,5 @@
 ---
-Name: starter-kit-error-logging
+Name: ss-dev-kit-error-logging
 ---
 SilverStripe\Core\Injector\Injector:
   Psr\Log\LoggerInterface.errorhandler:
@@ -8,5 +8,5 @@ SilverStripe\Core\Injector\Injector:
   LogFileHandler:
     class: Monolog\Handler\StreamHandler
     constructor:
-      - "/var/www/.ss-dev-starter-kit/logs/silverstripe.log"
+      - "/var/www/.ss-dev-kit/logs/silverstripe.log"
       - "debug"

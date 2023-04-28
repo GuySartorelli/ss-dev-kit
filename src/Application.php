@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Silverstripe\DevStarterKit;
+namespace Silverstripe\DevKit;
 
 use Symfony\Component\Console\Application as ConsoleApplication;
 use Symfony\Component\Dotenv\Dotenv;

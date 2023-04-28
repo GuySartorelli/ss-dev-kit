@@ -1,10 +1,10 @@
 <?php declare(strict_types=1);
 
-namespace Silverstripe\DevStarterKit\Command;
+namespace Silverstripe\DevKit\Command;
 
 use Exception;
-use Silverstripe\DevStarterKit\IO\CommandOutput;
-use Silverstripe\DevStarterKit\Environment\HasEnvironment;
+use Silverstripe\DevKit\IO\CommandOutput;
+use Silverstripe\DevKit\Environment\HasEnvironment;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;

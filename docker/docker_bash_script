@@ -61,7 +61,7 @@ for version in $versions; do
 					value="debug,profile"
 				fi
 				if [[ "$option" == "xdebug.output_dir" ]]; then
-					value="/var/www/.ss-dev-starter-kit/artifacts/xdebug"
+					value="/var/www/.ss-dev-kit/artifacts/xdebug"
 				fi
 				if [[ "$option" == "xdebug.client_port" ]]; then
 					value="9003" # this is the port on the HOST that should listen for xdebug

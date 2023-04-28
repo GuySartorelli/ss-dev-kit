@@ -1,10 +1,10 @@
 <?php declare(strict_types=1);
 
-namespace Silverstripe\DevStarterKit\Command\Env;
+namespace Silverstripe\DevKit\Command\Env;
 
-use Silverstripe\DevStarterKit\Command\BaseCommand;
-use Silverstripe\DevStarterKit\Environment\HasEnvironment;
-use Silverstripe\DevStarterKit\Environment\UsesDocker;
+use Silverstripe\DevKit\Command\BaseCommand;
+use Silverstripe\DevKit\Environment\HasEnvironment;
+use Silverstripe\DevKit\Environment\UsesDocker;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -13,7 +13,7 @@ use Symfony\Component\Filesystem\Exception\IOException;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Path;
 use RuntimeException;
-use Silverstripe\DevStarterKit\IO\StepLevel;
+use Silverstripe\DevKit\IO\StepLevel;
 use Symfony\Component\Console\Input\InputOption;
 
 /**

@@ -1,13 +1,13 @@
 <?php declare(strict_types=1);
 
-namespace Silverstripe\DevStarterKit\Command\Docker;
+namespace Silverstripe\DevKit\Command\Docker;
 
-use Silverstripe\DevStarterKit\Command\BaseCommand;
-use Silverstripe\DevStarterKit\Environment\HasEnvironment;
-use Silverstripe\DevStarterKit\Environment\UsesDocker;
+use Silverstripe\DevKit\Command\BaseCommand;
+use Silverstripe\DevKit\Environment\HasEnvironment;
+use Silverstripe\DevKit\Environment\UsesDocker;
 use Symfony\Component\Console\Command\Command;
-use Silverstripe\DevStarterKit\IO\StepLevel;
-use Silverstripe\DevStarterKit\Environment\DockerService;
+use Silverstripe\DevKit\IO\StepLevel;
+use Silverstripe\DevKit\Environment\DockerService;
 use Symfony\Component\Console\Input\InputOption;
 
 /**

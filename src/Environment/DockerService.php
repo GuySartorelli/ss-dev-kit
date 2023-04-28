@@ -1,9 +1,9 @@
 <?php
 
-namespace Silverstripe\DevStarterKit\Environment;
+namespace Silverstripe\DevKit\Environment;
 
 use InvalidArgumentException;
-use Silverstripe\DevStarterKit\IO\CommandOutput;
+use Silverstripe\DevKit\IO\CommandOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Process\Process;
 

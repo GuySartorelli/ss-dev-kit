@@ -1,5 +1,5 @@
 ---
-Name: starter-kit-no-https
+Name: ss-dev-kit-no-https
 After: '#appsecurity'
 ---
 # Make sure we never force https, since SSL isn't supported yet.

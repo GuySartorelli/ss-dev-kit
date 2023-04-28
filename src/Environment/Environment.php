@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Silverstripe\DevStarterKit\Environment;
+namespace Silverstripe\DevKit\Environment;
 
 use LogicException;
 use Symfony\Component\Filesystem\Path;
@@ -16,7 +16,7 @@ final class Environment
 
     public const ATTACHED_ENV_FILE = '.attached-env';
 
-    public const ENV_META_DIR = '.ss-dev-starter-kit';
+    public const ENV_META_DIR = '.ss-dev-kit';
 
     public static function dirIsInEnv(string $dir): bool
     {
@@ -64,7 +64,7 @@ final class Environment
     }
 
     /**
-     * Gets the absolute path to the starter kit directory inside a given project environment
+     * Gets the absolute path to the dev kit directory inside a given project environment
      */
     public function getMetaDir(): string
     {

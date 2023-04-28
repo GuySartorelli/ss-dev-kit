@@ -1,12 +1,12 @@
 ---
-Name: starter-kit-mailhog
+Name: ss-dev-kit-mailhog
 ---
 SilverStripe\Control\Email\Email:
   admin_email:
     admin-email@bugfix.test: 'Admin-email'
 
 ---
-Name: starter-kit-mailhog-cms4
+Name: ss-dev-kit-mailhog-cms4
 Only:
   classexists: SilverStripe\Control\Email\SwiftMailer
 After:
@@ -19,7 +19,7 @@ SilverStripe\Core\Injector\Injector:
       0: '/home/www-data/go/bin/mhsendmail -t'
 
 ---
-Name: starter-kit-mailhog-cms5
+Name: ss-dev-kit-mailhog-cms5
 Only:
   classexists: Symfony\Component\Mailer\Transport\AbstractTransport
 After: '#mailer'

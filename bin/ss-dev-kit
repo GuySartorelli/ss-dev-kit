@@ -7,15 +7,15 @@ if (!file_exists($autoloadFile)) {
 }
 require_once $autoloadFile;
 
-use Silverstripe\DevStarterKit\Application;
-use Silverstripe\DevStarterKit\Command;
+use Silverstripe\DevKit\Application;
+use Silverstripe\DevKit\Command;
 
 Application::bootstrap();
 
 // @TODO consider handling version number similarly to how composer does.
 // You can use the major and probably even minor version as a constant,
 // and then when packaging the phar mark the actual patch version as well.
-$application = new Application('Silverstripe Developer Starter Kit');
+$application = new Application('Silverstripe Developer Kit');
 
 // @TODO review the default options in Application::getDefaultInputDefinition()
 // Make sure we're respecting everything there - or remove anything we explicitly
