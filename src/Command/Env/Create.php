@@ -93,6 +93,8 @@ class Create extends BaseCommand
 
     private function validateOptions()
     {
+        $this->input->validate();
+
         // @TODO don't allow creating a new env (unless using attach mode) if there's ANYTHING in the project dir
         $projectPath = $this->input->getArgument('env-path');
         if (Path::isAbsolute($projectPath)) {
