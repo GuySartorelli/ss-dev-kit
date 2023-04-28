@@ -16,7 +16,7 @@ services:
       APACHE_LOG_DIR: "/var/www/{{metaDirName}}/logs/apache2"
     {% if webPort %}ports: ["{{webPort}}:80"]{% endif %}
 
-  database-container:
+  database:
     container_name: {{projectName}}_database
     image: {{database}}:{{dbVersion}}
     restart: always
