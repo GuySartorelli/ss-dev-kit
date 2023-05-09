@@ -11,6 +11,8 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use RuntimeException;
 use Silverstripe\DevKit\Application;
+use Silverstripe\DevKit\Compat\Filesystem;
+use Silverstripe\DevKit\Compat\OS;
 use Silverstripe\DevKit\IO\StepLevel;
 use Silverstripe\DevKit\Environment\UsesDocker;
 use Silverstripe\DevKit\Environment\DockerService;
@@ -21,7 +23,6 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Filesystem\Exception\IOException;
-use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Path;
 use Twig\Environment as TwigEnvironment;
 use Twig\Loader\FilesystemLoader;
@@ -71,9 +72,9 @@ class Create extends BaseCommand
     protected function initialize(InputInterface $input, OutputInterface $output)
     {
         parent::initialize($input, $output);
+        $this->filesystem = new Filesystem();
         $this->normaliseRecipe();
         $this->validateOptions();
-        $this->filesystem = new Filesystem();
         // Do this in initialise so that if there are any issues loading the template dir
         // we error out early
         $twigLoader = new FilesystemLoader(Application::getTemplateDir());
@@ -102,15 +103,15 @@ class Create extends BaseCommand
         } else {
            $projectPath = Path::makeAbsolute($projectPath, getcwd());
         }
-        if (is_dir($projectPath) && Environment::dirIsInEnv($projectPath)) {
+        if ($this->filesystem->isDir($projectPath) && Environment::dirIsInEnv($projectPath)) {
             throw new RuntimeException('Project path is inside an existing environment. Cannot create nested environments.');
         }
-        if (is_file($projectPath)) {
+        if ($this->filesystem->isFile($projectPath)) {
             throw new RuntimeException('Project path must not be a file.');
         }
 
         // @TODO also check for a composer.json file?
-        if ($this->input->getOption('attach') && !is_dir($projectPath)) {
+        if ($this->input->getOption('attach') && !$this->filesystem->isDir($projectPath)) {
             throw new RuntimeException('Project path must exist when --attach is used');
         }
 
@@ -148,7 +149,7 @@ class Create extends BaseCommand
     protected function rollback(): void
     {
         $this->output->endStep(StepLevel::Command, 'Error occurred, rolling back...', success: false);
-        if ($this->env && file_exists(Path::join($this->env->getDockerDir(), 'docker-compose.yml'))) {
+        if ($this->env && $this->filesystem->exists(Path::join($this->env->getDockerDir(), 'docker-compose.yml'))) {
             $this->output->writeln('Tearing down docker');
             $this->getDockerService()->down(removeOrphans: true, images: true, volumes: true);
         }
@@ -244,7 +245,7 @@ class Create extends BaseCommand
         $isAttachMode = $this->input->getOption('attach');
         $projectRoot = $this->env->getProjectRoot();
         $mkDirs = [];
-        if (!is_dir($projectRoot)) {
+        if (!$this->filesystem->isDir($projectRoot)) {
             if ($isAttachMode) {
                 throw new RuntimeException('Project root must exist with --attach is used');
             }
@@ -383,12 +384,12 @@ class Create extends BaseCommand
 
         if ($this->input->getOption('attach')) {
             $composerJsonPath = Path::join($this->env->getProjectRoot(), 'composer.json');
-            if (!file_exists($composerJsonPath)) {
+            if (!$this->filesystem->exists($composerJsonPath)) {
                 $this->output->warning('No composer.json file to determine PHP version. Using default');
                 $this->output->endStep(StepLevel::Primary, success: false);
                 return;
             }
-            $composerRaw = file_get_contents($composerJsonPath);
+            $composerRaw = $this->filesystem->getFileContents($composerJsonPath);
             $recipeOrProject = 'Project';
             $require = 'require';
         } else {
@@ -434,7 +435,7 @@ class Create extends BaseCommand
 
     private function composerInstallIfNecessary()
     {
-        if (is_dir(Path::join($this->env->getProjectRoot(), 'vendor')) || !file_exists(Path::join($this->env->getProjectRoot(), 'composer.json'))) {
+        if ($this->filesystem->isDir(Path::join($this->env->getProjectRoot(), 'vendor')) || !$this->filesystem->exists(Path::join($this->env->getProjectRoot(), 'composer.json'))) {
             $this->output->writeln('Composer dependencies already installed, or no composer.json file found.');
             return true;
         }
@@ -606,6 +607,11 @@ class Create extends BaseCommand
             'dbVersion' => $this->input->getOption('db-version'),
             'attached' => false,
             'webPort' => $this->env->getPort(),
+            'metaDirName' => Environment::ENV_META_DIR,
+            'UID' => OS::getUserID(),
+            'GID' => OS::getGroupID(),
+            'composerCacheDir' => OS::getComposerCacheDir(),
+            'OS' => OS::getOS(),
         ];
 
         return $this->twig->render($template, $variables);

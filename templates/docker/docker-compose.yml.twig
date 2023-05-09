@@ -5,11 +5,16 @@ services:
   webserver:
     container_name: {{projectName}}_webserver
     image: gsartorelli/webserver
-    build: .
+    build:
+      context: .
+      args:
+        USER_ID: ${WWW_DATA_UID:-0}
+        GROUP_ID: ${WWW_DATA_GID:-0}
     restart: always
     volumes:
-      - ../../:/var/www
-      - ~/.cache/composer:/home/www-data/.cache/composer
+      - "../../:/var/www"
+    {% if composerCacheDir %}  - "{{composerCacheDir}}:/home/www-data/.cache/composer"{% endif %}
+
     domainname: {{hostSuffix}}
     hostname: {{projectName}}
     environment:

@@ -3,11 +3,14 @@
 namespace Silverstripe\DevKit\Environment;
 
 use LogicException;
+use Silverstripe\DevKit\Compat\Filesystem;
 use Symfony\Component\Filesystem\Path;
 use Symfony\Component\Yaml\Yaml;
 
 final class Environment
 {
+    private static Filesystem $filesystem;
+
     private string $baseDir;
 
     private string $name;
@@ -96,12 +99,12 @@ final class Environment
 
     public function isAttachedEnv()
     {
-        return file_exists(Path::join($this->getMetaDir(), self::ATTACHED_ENV_FILE));
+        return self::getFileSystem()->exists(Path::join($this->getMetaDir(), self::ATTACHED_ENV_FILE));
     }
 
     public function exists(): bool
     {
-        return is_dir($this->getProjectRoot());
+        return self::getFileSystem()->isDir($this->getProjectRoot());
     }
 
     /**
@@ -110,7 +113,7 @@ final class Environment
     public function getDockerComposeData(): array
     {
         $filePath = Path::join($this->getDockerDir(), 'docker-compose.yml');
-        if (is_file($filePath)) {
+        if (self::getFileSystem()->isFile($filePath)) {
             return Yaml::parseFile($filePath);
         }
         return [];
@@ -138,15 +141,16 @@ final class Environment
     private function getAttachedEnvName()
     {
         $path = Path::join($this->getProjectRoot(), self::ATTACHED_ENV_FILE);
-        if (file_exists($path)) {
-            return file_get_contents($path);
+        $fs = self::getFileSystem();
+        if ($fs->exists($path)) {
+            return self::getFileSystem()->getFileContents($path);
         }
         return null;
     }
 
     private static function findBaseDirForEnv(string $candidate): ?string
     {
-        if (!is_dir($candidate)) {
+        if (!self::getFileSystem()->isDir($candidate)) {
             throw new LogicException("'$candidate' is not a directory.");
         }
 
@@ -158,7 +162,7 @@ final class Environment
         // Recursively check the proposed path and its parents for the meta dir.
         while ($candidate && !in_array($candidate, $stopAtDirs)) {
             // If we find the environment meta directory, we're in a project.
-            if (is_dir(Path::join($candidate, self::ENV_META_DIR))) {
+            if (self::getFileSystem()->isDir(Path::join($candidate, self::ENV_META_DIR))) {
                 return $candidate;
             }
 
@@ -167,5 +171,13 @@ final class Environment
         }
 
         return null;
+    }
+
+    private static function getFileSystem(): Filesystem
+    {
+        if (!isset(self::$filesystem)) {
+            self::$filesystem = new Filesystem();
+        }
+        return self::$filesystem;
     }
 }

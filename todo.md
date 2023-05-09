@@ -2,11 +2,12 @@
 
 ## IMMEDIATE NEXT STEPS
 
-- clone mode for create command
 - make sure this thing works on mac and WSL2
-- Deal with generalisation where necessary (e.g. UID and/or GID may not be 1000)
+  - Bonus points for it working natively on windows
+- Make attach mode a little friendlier (e.g. don't overwrite files without permission)
 - Add some _VERY_ basic documentation
   - After this point, we can get some guinea pigs
+- clone mode for create command??
 - deal with TODO comments in code
 - error and exception handling?
 - DB commands (dump and restore)
@@ -33,6 +34,7 @@
       - Symfony cli binds ports by default.
       - Has a proxy for using hostname: <https://symfony.com/doc/current/setup/symfony_server.html#setting-up-the-local-proxy>
         - Use a lockable command for this: <https://kurozumi.github.io/symfony-docs/console/lockable_trait.html>
+        - Or maybe offload this to [traefik](https://doc.traefik.io/traefik/providers/docker/)
       - Should be really easy to do something similar.
 - Auto-generated SSL cert (and make sure we have an SSL and a non-SSL port? Does symfony do that?)
 - Set the docker starting php version in the per-project docker image. That way `docker compose down && docker compose up -d` will give a container with the correct PHP version.

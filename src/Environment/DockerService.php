@@ -1,10 +1,13 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Silverstripe\DevKit\Environment;
 
 use InvalidArgumentException;
+use Silverstripe\DevKit\Compat\Filesystem;
 use Silverstripe\DevKit\IO\CommandOutput;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Dotenv\Dotenv;
+use Symfony\Component\Filesystem\Path;
 use Symfony\Component\Process\Process;
 
 final class DockerService
@@ -248,7 +251,7 @@ final class DockerService
             ...($shouldOutput && $interactive ? ['-i'] : []),
             ...($workingDir !== null ? ['--workdir', $workingDir] : []),
             ...($workingDir === null && $container === self::CONTAINER_WEBSERVER ? ['--workdir', '/var/www'] : []),
-            ...($asRoot ? [] : ['-u', '1000']), // @TODO we'll need to get the same user as is declared for www-data, in case there's multiple users on the machine where the command is run
+            ...($asRoot ? [] : ['-u', $this->getUidForWwwdata()]),
             $container,
             'env',
             'TERM=xterm-256color',
@@ -317,5 +320,14 @@ final class DockerService
             default:
                 throw new InvalidArgumentException('$outputType must be one of the OUTPUT_TYPE constants');
         }
+    }
+
+    private function getUidForWwwdata(): int
+    {
+        $envFile = Path::join($this->env->getDockerDir(), '.env');
+        $dotenv = new Dotenv();
+        $fs = new Filesystem();
+        $envVars = $dotenv->parse($fs->getFileContents($envFile), $envFile);
+        return (int) $envVars['WWW_DATA_UID'];
     }
 }
