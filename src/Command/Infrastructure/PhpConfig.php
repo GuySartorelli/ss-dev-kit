@@ -9,7 +9,6 @@ use Silverstripe\DevKit\Environment\PHPService;
 use Silverstripe\DevKit\IO\StepLevel;
 use Silverstripe\DevKit\Environment\HasEnvironment;
 use Silverstripe\DevKit\Environment\UsesDocker;
-use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -60,26 +59,26 @@ class PhpConfig extends BaseCommand
         if ($phpVersion = $this->input->getOption('php-version')) {
             $success = $this->phpService->swapToVersion($phpVersion);
             if (!$success) {
-                return Command::FAILURE;
+                return self::FAILURE;
             }
         }
 
         if ($this->input->getOption('toggle-debug')) {
             $success = $this->toggleDebug();
             if (!$success) {
-                return Command::FAILURE;
+                return self::FAILURE;
             }
         }
 
         if ($this->input->getOption('info')) {
             $success = $this->printPhpInfo();
             if (!$success) {
-                return Command::FAILURE;
+                return self::FAILURE;
             }
         }
 
         $this->output->endStep(StepLevel::Command, 'Sucessfully completed command');
-        return Command::SUCCESS;
+        return self::SUCCESS;
     }
 
     protected function toggleDebug(): bool

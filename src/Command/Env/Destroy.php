@@ -5,7 +5,6 @@ namespace Silverstripe\DevKit\Command\Env;
 use Silverstripe\DevKit\Command\BaseCommand;
 use Silverstripe\DevKit\Environment\HasEnvironment;
 use Silverstripe\DevKit\Environment\UsesDocker;
-use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -69,7 +68,7 @@ class Destroy extends BaseCommand
         $success = $this->pullDownDocker();
         if (!$success) {
             $this->output->endStep(StepLevel::Command, success: false);
-            return Command::FAILURE;
+            return self::FAILURE;
         }
 
         if ($this->input->getOption('detach')) {
@@ -81,7 +80,7 @@ class Destroy extends BaseCommand
                 $this->filesystem->remove($this->env->getMetaDir());
             } catch (IOException $e) {
                 $this->output->endStep(StepLevel::Command, "Couldn't delete directory: {$e->getMessage()}", false);
-                return Command::FAILURE;
+                return self::FAILURE;
             }
         } else {
             // Delete environment directory
@@ -90,13 +89,13 @@ class Destroy extends BaseCommand
                 $this->filesystem->remove($this->env->getProjectRoot());
             } catch (IOException $e) {
                 $this->output->endStep(StepLevel::Command, "Couldn't delete environment directory: {$e->getMessage()}", false);
-                return Command::FAILURE;
+                return self::FAILURE;
             }
         }
 
         $destroyedOrDetached = $this->input->getOption('detach') ? 'detached' : 'destroyed';
         $this->output->endStep(StepLevel::Command, "Environment successfully $destroyedOrDetached.");
-        return Command::SUCCESS;
+        return self::SUCCESS;
     }
 
     protected function pullDownDocker(): bool

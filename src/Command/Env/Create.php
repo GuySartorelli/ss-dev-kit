@@ -17,7 +17,6 @@ use Silverstripe\DevKit\IO\StepLevel;
 use Silverstripe\DevKit\Environment\UsesDocker;
 use Silverstripe\DevKit\Environment\DockerService;
 use SplFileInfo;
-use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -185,7 +184,7 @@ class Create extends BaseCommand
         $success = $this->prepareProjectRoot();
         if (!$success) {
             $this->rollback();
-            return Command::FAILURE;
+            return self::FAILURE;
         }
 
         // Docker stuff
@@ -193,7 +192,7 @@ class Create extends BaseCommand
         // @TODO better failure handling - probably just throw some exception
         if (!$success) {
             $this->rollback();
-            return Command::FAILURE;
+            return self::FAILURE;
         }
 
         // @TODO set default PHP version as part of the docker image instead
@@ -214,7 +213,7 @@ class Create extends BaseCommand
             $success = $this->buildComposerProject();
             if (!$success) {
                 $this->rollback();
-                return Command::FAILURE;
+                return self::FAILURE;
             }
         }
         $this->addExtraModules();
@@ -224,7 +223,7 @@ class Create extends BaseCommand
         $success = $this->copyWebrootFiles();
         if (!$success) {
             $this->rollback();
-            return Command::FAILURE;
+            return self::FAILURE;
         }
 
         // Run dev/build
@@ -236,7 +235,7 @@ class Create extends BaseCommand
         // @TODO consider other output that might be useful here... maybe a full `ss-dev-kit info`?
         $this->output->endStep(StepLevel::Command, 'Completed successfully.');
         $this->output->writeln("Navigate to <href=$url>$url</>");
-        return Command::SUCCESS;
+        return self::SUCCESS;
     }
 
     protected function prepareProjectRoot(): bool

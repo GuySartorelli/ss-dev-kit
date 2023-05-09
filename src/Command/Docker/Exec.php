@@ -5,7 +5,6 @@ namespace Silverstripe\DevKit\Command\Docker;
 use Silverstripe\DevKit\Command\BaseCommand;
 use Silverstripe\DevKit\Environment\HasEnvironment;
 use Silverstripe\DevKit\Environment\UsesDocker;
-use Symfony\Component\Console\Command\Command;
 use Silverstripe\DevKit\IO\StepLevel;
 use Silverstripe\DevKit\Environment\DockerService;
 use Symfony\Component\Console\Input\InputArgument;
@@ -45,11 +44,11 @@ class Exec extends BaseCommand
         );
         if (!$success) {
             $this->output->endStep(StepLevel::Command, 'Command failed', success: false);
-            return Command::FAILURE;
+            return self::FAILURE;
         }
 
         $this->output->endStep(StepLevel::Command, 'Command executed successfully');
-        return Command::SUCCESS;
+        return self::SUCCESS;
     }
 
     /**

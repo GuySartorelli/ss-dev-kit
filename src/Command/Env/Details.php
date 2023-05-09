@@ -7,7 +7,6 @@ use Silverstripe\DevKit\Environment\DockerService;
 use Silverstripe\DevKit\Environment\PHPService;
 use Silverstripe\DevKit\Environment\HasEnvironment;
 use Silverstripe\DevKit\Environment\UsesDocker;
-use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 
 class Details extends BaseCommand
@@ -58,7 +57,7 @@ class Details extends BaseCommand
             ...array_values($containers),
         ]]);
 
-        return Command::SUCCESS;
+        return self::SUCCESS;
     }
 
     private function getDbData(string $containerStatus): array
