@@ -35,7 +35,7 @@ class Create extends BaseCommand
 
     protected static $defaultName = 'env:create';
 
-    protected static $defaultDescription = 'Installs/clones a Silverstripe CMS installation and sets up a new docker environment with a webhost.';
+    protected static $defaultDescription = 'Installs a Silverstripe CMS installation and sets up a new docker environment with a webhost.';
 
     /**
      * Used to define short names to easily select common recipes
@@ -114,10 +114,6 @@ class Create extends BaseCommand
             throw new RuntimeException('Project path must exist when --attach is used');
         }
 
-        if ($this->input->getOption('attach') && $this->input->getOption('clone')) {
-            throw new RuntimeException('Cannot use --attach and --clone together');
-        }
-
         if ($this->input->getOption('port') && $this->input->getOption('no-port')) {
             throw new RuntimeException('Cannot use --port and --no-port together');
         }
@@ -172,8 +168,6 @@ class Create extends BaseCommand
         $msg = 'Creating new project and attaching environment';
         if ($this->input->getOption('attach')) {
             $msg = 'Attaching environment to existing project';
-        } elseif ($this->input->getOption('clone')) {
-            $msg = 'Cloning project and attaching environment';
         }
         $this->output->startStep(StepLevel::Command, $msg);
 
@@ -684,15 +678,7 @@ class Create extends BaseCommand
             'attach',
             'a',
             InputOption::VALUE_NEGATABLE,
-            'Attach a docker environment to an existing silverstripe project directory. Cannot use --clone and --attach together. --constraint and --recipe do nothing when this option is used.',
-            false,
-        );
-        // @TODO add clone functionality
-        $this->addOption(
-            'clone',
-            'g',
-            InputOption::VALUE_REQUIRED,
-            'Use "git clone" to clone an existing silverstripe project from a remote git repository into env-path. Cannot use --attach and --clone together. --constraint and --recipe do nothing when this option is used.',
+            'Attach a docker environment to an existing silverstripe project directory. --constraint and --recipe do nothing when this option is used.',
             false,
         );
         $recipeDescription = '';
