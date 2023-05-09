@@ -37,7 +37,7 @@ $application->addCommands([
     // new Command\Cli\Sake(),
     // new Command\Cli\LintPhp(),
     // new Command\Cli\Phpunit(), // Do we want a behat command as well? May as well, right?
-    // new Command\Database\Dump(),
+    new Command\Database\Dump(),
     // new Command\Database\Restore(),
 ]);
 

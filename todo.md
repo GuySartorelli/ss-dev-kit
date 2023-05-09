@@ -5,6 +5,7 @@
 - make sure this thing works on mac and WSL2
   - Bonus points for it working natively on windows
 - Make attach mode a little friendlier (e.g. don't overwrite files without permission)
+- Make sure all of the defaults are sane
 - Add some _VERY_ basic documentation
   - After this point, we can get some guinea pigs
 - clone mode for create command??
