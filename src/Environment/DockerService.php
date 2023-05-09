@@ -225,6 +225,17 @@ final class DockerService
         return $this->runCommand($command, $outputType);
     }
 
+    public function copyToContainer(string $container, string $copyFrom, string $copyTo, int $outputType = self::OUTPUT_TYPE_NORMAL): bool|string
+    {
+        $command = [
+            'docker',
+            'cp',
+            $copyFrom,
+            $this->env->getName() . "_$container:$copyTo",
+        ];
+        return $this->runCommand($command, $outputType);
+    }
+
     /**
      * Run some command in the webserver docker container - optionally as root.
      *
