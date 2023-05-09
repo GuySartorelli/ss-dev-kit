@@ -2,7 +2,7 @@
 
 namespace Silverstripe\DevKit\Command\Database;
 
-use LogicException;
+use RuntimeException;
 use Silverstripe\DevKit\Command\BaseCommand;
 use Silverstripe\DevKit\Compat\Filesystem;
 use Silverstripe\DevKit\Environment\DockerService;
@@ -42,21 +42,21 @@ class Dump extends BaseCommand
         $this->input->validate();
 
         $fileSystem = new Filesystem();
-        $this->dumpDir = Path::canonicalize($this->input->getArgument('dump-dir'));
+        $this->dumpDir = Path::canonicalize($this->input->getArgument('destination-dir'));
         if (!Path::isAbsolute($this->dumpDir)) {
             $this->dumpDir = Path::makeAbsolute($this->dumpDir, getcwd());
         }
 
         if (!$fileSystem->exists($this->dumpDir)) {
-            throw new LogicException("dump-dir '$this->dumpDir' does not exist.");
+            throw new RuntimeException("destination-dir '$this->dumpDir' does not exist.");
         }
 
         if ($fileSystem->isFile($this->dumpDir)) {
-            throw new LogicException("dump-dir must not be a file.");
+            throw new RuntimeException("destination-dir must not be a file.");
         }
 
         if (str_contains($this->dumpDir, ':') || str_contains($this->input->getArgument('filename') ?: '', ':')) {
-            throw new LogicException('Neither "dump-dir" nor "filename" can contain a colon.');
+            throw new RuntimeException('Neither "destination-dir" nor "filename" can contain a colon.');
         }
     }
 
@@ -119,7 +119,7 @@ class Dump extends BaseCommand
         $this->setAliases(['dump']);
 
         $this->addArgument(
-            'dump-dir',
+            'destination-dir',
             InputArgument::REQUIRED,
             'The path for a directory where the database should be dumped to.',
         );
