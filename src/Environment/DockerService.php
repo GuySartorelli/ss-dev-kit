@@ -289,7 +289,7 @@ final class DockerService
                 }
             );
             // Advance the progressbar every second if we're not using the actual output
-            if (!$shouldOutput) {
+            if (!$shouldOutput && !$this->output->isDebug()) {
                 while ($process->isRunning()) {
                     $process->checkTimeout();
                     $this->output->advanceProgressBar();
@@ -298,6 +298,10 @@ final class DockerService
             }
             // Make absolutely sure the process has finished
             $process->wait();
+        }
+
+        if (!$process->isSuccessful()) {
+            $this->output->writeln('Docker exit code: ' . $process->getExitCode(), OutputInterface::VERBOSITY_DEBUG);
         }
 
         return $outputType === self::OUTPUT_TYPE_RETURN ? $process->getOutput() : $process->isSuccessful();
