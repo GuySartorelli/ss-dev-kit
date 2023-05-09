@@ -245,14 +245,13 @@ final class DockerService
         $shouldOutput = $this->shouldOutputToTerminal($outputType);
         $execCommand = [
             'docker',
-            'compose',
             'exec',
             ...($shouldOutput && Process::isTtySupported() ? ['-t'] : []),
             ...($shouldOutput && $interactive ? ['-i'] : []),
             ...($workingDir !== null ? ['--workdir', $workingDir] : []),
             ...($workingDir === null && $container === self::CONTAINER_WEBSERVER ? ['--workdir', '/var/www'] : []),
             ...($asRoot ? [] : ['-u', $this->getUidForWwwdata()]),
-            $container,
+            $this->env->getName() . '_' . $container,
             'env',
             'TERM=xterm-256color',
             'bash',
