@@ -368,7 +368,7 @@ class Create extends BaseCommand
         if ($phpVersion = $this->input->getOption('php-version')) {
             if (PHPService::versionIsAvailable($phpVersion)) {
                 $phpService->swapToVersion($phpVersion);
-                $this->output->endStep(StepLevel::Primary);
+                $this->output->endStep(StepLevel::Primary, "Using PHP version $phpVersion");
                 return;
             }
 
@@ -418,7 +418,7 @@ class Create extends BaseCommand
                 continue;
             }
             $phpService->swapToVersion($phpVersion);
-            $this->output->endStep(StepLevel::Primary);
+            $this->output->endStep(StepLevel::Primary, "Using PHP version $phpVersion");
             return;
         }
 
