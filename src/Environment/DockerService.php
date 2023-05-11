@@ -80,6 +80,9 @@ final class DockerService
         foreach (json_decode($process->getOutput(), true) as $container) {
             $name = str_replace($this->env->getName() . '_', '', $container['Name']);
             $containers[$name] = $container['State'];
+            if (!empty($container['Health'])) {
+                $containers[$name] .= ' (' . $container['Health'] . ')';
+            }
         }
         return $containers;
     }
@@ -93,6 +96,7 @@ final class DockerService
         bool $forceRecreate = false,
         bool $noRecreate = false,
         bool $removeOrphans = false,
+        bool $wait = true,
         int $outputType = self::OUTPUT_TYPE_NORMAL
     ): bool|string
     {
@@ -118,6 +122,9 @@ final class DockerService
         }
         if ($removeOrphans) {
             $options[] = '--remove-orphans';
+        }
+        if ($wait) {
+            $options[] = '--wait';
         }
         $options[] = '-d';
 

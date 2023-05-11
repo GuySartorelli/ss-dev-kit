@@ -38,6 +38,7 @@ class Up extends BaseCommand
             $this->input->getOption('force-recreate'),
             $this->input->getOption('no-recreate'),
             $this->input->getOption('remove-orphans'),
+            !$this->input->getOption('no-wait'),
             DockerService::OUTPUT_TYPE_ALWAYS,
         );
         if (!$success) {
@@ -84,6 +85,10 @@ class Up extends BaseCommand
         $this->addOption(
             'no-recreate',
             description: "If containers already exist, don't recreate them. Incompatible with --force-recreate."
+        );
+        $this->addOption(
+            'no-wait',
+            description: "Don't wait for containers to be healthy."
         );
         $this->addOption(
             'remove-orphans',

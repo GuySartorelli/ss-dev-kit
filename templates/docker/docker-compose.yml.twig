@@ -25,6 +25,12 @@ services:
     container_name: {{projectName}}_database
     image: {{database}}:{{dbVersion}}
     restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      # interval: 60s
+      retries: 5
+      # start_period: 20s
+      timeout: 10s
     # use ports instead of IP address for database connection so a database manager can be used on the host
     ## we'll be using dockerised phpmyadmin or similar, so no need - hopefully.
     # ports:
