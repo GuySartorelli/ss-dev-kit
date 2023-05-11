@@ -54,4 +54,14 @@ class Application extends ConsoleApplication
     {
         return Path::join(self::getRootDir(), 'copy-to-environment');
     }
+
+    public static function getScriptName(): string
+    {
+        global $argv;
+        if (isset($argv[0])) {
+            return $argv[0];
+        }
+
+        return $_SERVER['SCRIPT_FILENAME'];
+    }
 }

@@ -315,7 +315,7 @@ class Create extends BaseCommand
                     [
                         'Unable to build the db.',
                         "Build the db by going to <href=$url>$url</>",
-                        'Or run: dev-tools sake dev/build -p ' . $this->env->getProjectRoot(),
+                        'Or run: ' . Application::getScriptName() . ' exec vendor/bin/sake dev/build -p ' . $this->env->getProjectRoot(),
                     ],
                     type: 'WARNING',
                     style: 'fg=black;bg=yellow',
