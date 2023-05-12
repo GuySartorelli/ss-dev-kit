@@ -4,12 +4,11 @@
 
 - Make attach mode a little friendlier (e.g. don't overwrite files without permission)
 - Make sure all of the defaults are sane
-- PHP error handling (just promote to ErrorException) so commands can roll back
-- Add some _VERY_ basic documentation
   - After this point, we can get some guinea pigs
+- Add some basic validation of prerequisites (docker and docker composer installed)
 - Add format option to db dump command
 - deal with TODO comments in code
-- error and exception handling?
+- Cleaner exception handling
 - DB commands (dump and restore)
 - shortcut commands (composer, sake)
 - add phpcs config and fix linting issues
@@ -65,7 +64,6 @@
 ## Output
 
 - Have clean global error/exception handling
-  - Promote errors to exceptions so we can catch them.
   - Probably most places where I'm returning a success boolean should just thrown an exception on failure instead.
   - According to symfony docs "The full exception stacktrace is printed if the VERBOSITY_VERBOSE level or above is used." Find out how to change that so it only happens in debug mode. Verbose is for users of the system, the stack trace is for debugging the system.
 

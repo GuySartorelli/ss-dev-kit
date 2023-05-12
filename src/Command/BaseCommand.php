@@ -5,6 +5,7 @@ namespace Silverstripe\DevKit\Command;
 use Exception;
 use Silverstripe\DevKit\IO\CommandOutput;
 use Silverstripe\DevKit\Environment\HasEnvironment;
+use Silverstripe\DevKit\ErrorHandler;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -41,9 +42,13 @@ abstract class BaseCommand extends Command
      */
     protected function initialize(InputInterface $input, OutputInterface $output)
     {
-        parent::initialize($input, $output);
         $this->input = $input;
         $this->output = new CommandOutput($input, $output);
+
+        // Eventually this might be elevated to the Application but for now this is the correct spot
+        ErrorHandler::register($this->output);
+
+        parent::initialize($input, $output);
 
         if (in_array(HasEnvironment::class, class_uses($this))) {
             /** @var BaseCommand&HasEnvironment $this */

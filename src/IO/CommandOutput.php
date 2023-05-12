@@ -184,6 +184,21 @@ class CommandOutput implements OutputInterface
     }
 
     /**
+     * A shortcut for {@link block()} formatted as a warning.
+     */
+    public function warningBlock(string|array $messages, bool $escape = true): void
+    {
+        $this->block(
+            $messages,
+            'WARNING',
+            'fg=black;bg=yellow',
+            padding: true,
+            escape: $escape,
+            verbosity: OutputInterface::VERBOSITY_NORMAL
+        );
+    }
+
+    /**
      * Formats a horizontal table.
      *
      * @param bool $verbosity Output this block in a specific verbosity, bypassing step levels.

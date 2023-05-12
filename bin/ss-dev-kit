@@ -9,7 +9,7 @@ if (PHP_VERSION_ID < 80100) {
 
 $autoloadFile = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
 if (!file_exists($autoloadFile)) {
-    throw new RuntimeException('You need to run composer install until we make a phar for this');
+    throw new RuntimeException('You need to run `composer install` until we make a phar for this');
 }
 require_once $autoloadFile;
 
