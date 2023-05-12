@@ -168,7 +168,7 @@ If your project does _not_ declare PHP as one of its dependencies, this tool won
 
 The tool will run `composer install` _only_ if there's no `vendor/` directory in your existing project. It will also run `sake dev/build` for you, so just like the normal command you'll get a URL after running that command which should work in your browser right away.
 
-#### Detatching from the environment afterward
+#### Detaching from the environment afterward
 
 If you want to delete the whole project directory, just [run the `destroy` command](#destroying-the-environment-afterward).
 
