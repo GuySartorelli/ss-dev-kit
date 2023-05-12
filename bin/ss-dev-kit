@@ -1,6 +1,12 @@
 #!/usr/bin/env php
 <?php declare(strict_types=1);
 
+if (PHP_VERSION_ID < 80100) {
+    echo 'Silverstripe Developer Kit requires at least PHP 8.1 and you are running ' . PHP_VERSION
+     . ', please upgrade PHP. Aborting.' . PHP_EOL;
+    exit(1);
+}
+
 $autoloadFile = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
 if (!file_exists($autoloadFile)) {
     throw new RuntimeException('You need to run composer install until we make a phar for this');
