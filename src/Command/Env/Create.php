@@ -311,17 +311,13 @@ class Create extends BaseCommand
                 $url = "{$this->env->getBaseURL()}/dev/build";
 
                 // Can't use $this->output->warning() because it escapes the link into plain text
-                $this->output->block(
+                $this->output->warningBlock(
                     [
                         'Unable to build the db.',
                         "Build the db by going to <href=$url>$url</>",
                         'Or run: ' . Application::getScriptName() . ' exec vendor/bin/sake dev/build -p ' . $this->env->getProjectRoot(),
                     ],
-                    type: 'WARNING',
-                    style: 'fg=black;bg=yellow',
-                    padding: true,
-                    escape: false,
-                    verbosity: OutputInterface::VERBOSITY_NORMAL
+                    escape: false
                 );
             }
         }
