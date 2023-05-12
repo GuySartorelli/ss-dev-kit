@@ -269,7 +269,7 @@ class Create extends BaseCommand
         $this->output->startStep(StepLevel::Primary, 'Spinning up docker');
         // @TODO have a "it's us silverstripe devs" mode that builds out a local copy of the main dockerfile before all of those?
         // Useful to validate local changes e.g. when we add new PHP versions - but not strictly necessary, as we can just do that manually
-        // cd dockerdir && docker build -t silverstripe/ss-dev-kit # or whatever
+        // cd dockerdir && docker build -t guysartorelli/ss-dev-kit # or whatever
         try {
             $this->output->writeln('Preparing docker directory');
             // Setup docker files

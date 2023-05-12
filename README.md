@@ -52,7 +52,7 @@ docker run --rm --interactive --tty --user $(id -u):$(id -g) -volume $PWD:/app c
 Eventually _this_ step won't be necessary either - I'll host this image on docker hub some day and have it be periodically automatically built to keep it up to date. For now, you'll need to build this image locally. Each environment uses this image as a base.
 
 ```sh
-docker build -t silverstripe/ss-dev-kit ./docker
+docker build -t guysartorelli/ss-dev-kit ./docker
 ```
 
 ### Add the executable to your `PATH`
