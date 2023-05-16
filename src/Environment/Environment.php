@@ -84,17 +84,12 @@ final class Environment
         return $this->name;
     }
 
-    public function getHostName(): string
-    {
-        return $this->getName() . '.' . getenv('DT_DEFAULT_HOST_SUFFIX');
-    }
-
     public function getBaseURL(): string
     {
         if ($port = $this->getPort()) {
             return "http://localhost:$port";
         }
-        return "http://{$this->getHostName()}";
+        return 'unknown';
     }
 
     public function isAttachedEnv()

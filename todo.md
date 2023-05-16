@@ -3,18 +3,18 @@
 ## IMMEDIATE NEXT STEPS
 
 - Make attach mode a little friendlier (e.g. don't overwrite files without permission)
-- Make sure all of the defaults are sane
-  - After this point, we can get some guinea pigs
-- Add some basic validation of prerequisites (docker and docker composer installed)
-- Add format option to db dump command
+- Add some basic validation of prerequisites (docker and docker composer installed, docker compose v2 not v1)
+- Add `--format` option to db dump command
 - deal with TODO comments in code
 - Cleaner exception handling
-- DB commands (dump and restore)
-- shortcut commands (composer, sake)
 - add phpcs config and fix linting issues
-- documentation
+- more thorough documentation
 - basic unit tests
   - After this point, it could be publishable
+- more unit tests
+- shortcut commands (composer, sake)
+- PLUGINS
+  - After this point, it could be useful for more than just new devs
 
 ## Reverse proxy
 

@@ -168,9 +168,7 @@ class PHPService
      */
     public static function versionIsAvailable(string $version): bool
     {
-        // @TODO handle php versions correctly - either ACTUALLY checking the docker container or as a const
-        $versions = explode(',', getenv('DT_PHP_VERSIONS'));
-        return in_array($version, $versions);
+        return in_array($version, self::getAvailableVersions());
     }
 
     /**
@@ -179,6 +177,11 @@ class PHPService
      */
     public static function getAvailableVersions(): array
     {
-        return explode(',', getenv('DT_PHP_VERSIONS'));
+        return [
+            '7.4',
+            '8.0',
+            '8.1',
+            '8.2',
+        ];
     }
 }

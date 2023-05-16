@@ -4,6 +4,12 @@ This is a set of tools based around creating and managing dockerised web develop
 
 It's very much a work in progress, and is something I am doing in my spare time.
 
+Please let me know if you have any recommendations for improving this thing - but check the [to do list](todo.md) first.
+
+- [Requirements](#requirements)
+- [Installation and setup](#installation-and-setup)
+- [Usage](#usage)
+
 ## Requirements
 
 ### Operating System
@@ -92,6 +98,16 @@ ln -s $(pwd)/bin/ss-dev-kit /usr/local/bin
 ```
 
 Now you should be able to simply run `ss-dev-kit` from the command line.
+
+### Environment variables
+
+Until we have a phar release of this, you can choose to either set environment variables in the normal way for your operating system, or in a `.env` file in the directory you've installed this to.
+
+Currently the only environment variable is `SS_DK_GITHUB_TOKEN` which is used to define a github token to pass to composer in case you need composer to be able to access any private repositories. If you're not using private repos, it's probably not worth setting.
+
+### Composer cache
+
+To speed things along, the dev kit tries to share your system's composer cache with the webserver container so it's not downloading everything from scratch all the time. It'll try to automagically find the directory, bt if you notice it's pretty slow at doing composery things you might want to set the `COMPOSER_CACHE_DIR` environment variable (see https://getcomposer.org/doc/03-cli.md#composer-cache-dir)
 
 ## Usage
 

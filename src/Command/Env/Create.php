@@ -193,7 +193,7 @@ class Create extends BaseCommand
         $this->setPHPVersion();
 
         // Share composer token
-        if ($githubToken = getenv('DT_GITHUB_TOKEN')) {
+        if ($githubToken = getenv('SS_DK_GITHUB_TOKEN')) {
             $this->output->writeln('Adding github token to composer');
             // @TODO is there any chance of this resulting in the token leaking? How to avoid that if so?
             // @TODO OMIT IT FROM "running command X in docker container" OUTPUT!!!
@@ -584,14 +584,10 @@ class Create extends BaseCommand
     {
         $templateName = basename($template);
         $this->output->writeln("Rendering <info>$templateName</info>");
-        // Prepare template variables
-        $hostname = $this->env->getHostName();
-        $hostParts = explode('.', $hostname);
 
+        // Prepare template variables
         $variables = [
             'projectName' => $this->env->getName(),
-            'hostName' => $hostname,
-            'hostSuffix' => array_pop($hostParts),
             'database' => $this->input->getOption('db'),
             'dbVersion' => $this->input->getOption('db-version'),
             'attached' => false,
@@ -693,9 +689,8 @@ class Create extends BaseCommand
             'c',
             InputOption::VALUE_REQUIRED,
             'The version constraint to use for the installed recipe.',
-            getenv('DT_DEFAULT_INSTALL_VERSION')
+            '^5.0'
         );
-        // @TODO add include-recipe-testing back in?
         $this->addOption(
             'extra-module',
             'm',
