@@ -461,7 +461,7 @@ class Create extends BaseCommand
         }
 
         $this->output->writeln('Copying composer project from temporary directory');
-        $this->getDockerService()->exec("cp -r $tmpDir/* /var/www/", outputType: DockerService::OUTPUT_TYPE_DEBUG);
+        $this->getDockerService()->exec("cp -rT $tmpDir /var/www", outputType: DockerService::OUTPUT_TYPE_DEBUG);
 
         $this->output->writeln('Removing temporary directory');
         $this->getDockerService()->exec("rm -rf $tmpDir", outputType: DockerService::OUTPUT_TYPE_DEBUG);

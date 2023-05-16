@@ -2,7 +2,6 @@
 
 ## IMMEDIATE NEXT STEPS
 
-- Fix bug where hidden files don't get mirrored across after composer create-project!! AHHHH!
 - Make attach mode a little friendlier (e.g. don't overwrite files without permission)
 - Make sure all of the defaults are sane
   - After this point, we can get some guinea pigs
