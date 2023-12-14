@@ -6,6 +6,10 @@ It's very much a work in progress, and is something I am doing in my spare time.
 
 Please let me know if you have any recommendations for improving this thing - but check the [to do list](todo.md) first.
 
+## DISCONTINUED
+
+Use [DDEV](https://ddev.readthedocs.io/) instead.
+
 ## Requirements
 
 ### Operating System
